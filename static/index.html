@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080d16">
+  <title>RF De-embedding Workbench</title>
+  <link rel="stylesheet" href="/static/base.css?v=23">
+  <link rel="stylesheet" href="/static/style.css?v=23">
+</head>
+<body>
+  <div class="ambient ambient-a"></div>
+  <div class="ambient ambient-b"></div>
+
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="RF De-embedding Workbench 首页">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 40 40" fill="none">
+          <rect x="1" y="1" width="38" height="38" rx="12" fill="url(#brandGrad)" fill-opacity=".16" stroke="url(#brandStroke)" stroke-opacity=".6"/>
+          <path d="M5.5 20h6l3.5-8 6.5 16 4.5-11 2.5 3h6" stroke="#5eead4" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+          <defs>
+            <linearGradient id="brandGrad" x1="2" y1="2" x2="38" y2="38"><stop stop-color="#22d3ee"/><stop offset="1" stop-color="#3b82f6"/></linearGradient>
+            <linearGradient id="brandStroke" x1="0" y1="0" x2="40" y2="40"><stop stop-color="#67e8f9"/><stop offset="1" stop-color="#60a5fa"/></linearGradient>
+          </defs>
+        </svg>
+      </span>
+      <span class="brand-copy">
+        <strong>RF <span>DE-EMBED</span></strong>
+        <small>PARAMETER WORKBENCH</small>
+      </span>
+    </a>
+    <div class="topbar-right">
+      <span class="secure-pill"><i></i>文件仅用于本次计算</span>
+      <span class="version-pill">双 2X Thru · S2P / S4P</span>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    <section class="hero">
+      <div class="hero-copy">
+        <div class="eyebrow"><span class="eyebrow-line"></span>FIXTURE REMOVAL / 01</div>
+        <h1>把夹具剥离，<br><em>看见 DUT 本身。</em></h1>
+        <p class="hero-lede">上传整体测量与左右两份 2X Thru 标准件，分别提取 1X 夹具，再进行双边或单边去嵌。</p>
+        <div class="hero-tags">
+          <span><b>01</b> 独立劈半 A / B</span>
+          <span><b>02</b> T 矩阵级联反演</span>
+          <span><b>03</b> 导出 Touchstone</span>
+        </div>
+      </div>
+      <div class="hero-diagram" aria-label="2X Thru A + DUT + 2X Thru B 去嵌结构示意">
+        <div class="diagram-topline"><span>REFERENCE PLANES</span><span class="live-dot">READY</span></div>
+        <div class="chain">
+          <div class="chain-port"><span class="port-dot"></span><small>PORT 1</small></div>
+          <div class="chain-block block-a"><small>2X A → 1X A</small><b>FIXTURE A</b><span>LEFT</span></div>
+          <div class="chain-link"><i></i></div>
+          <div class="chain-block block-dut"><small>MEASURED DEVICE</small><b>DUT</b><span>UNDER TEST</span></div>
+          <div class="chain-link"><i></i></div>
+          <div class="chain-block block-b"><small>2X B → 1X B</small><b>FIXTURE B</b><span>RIGHT</span></div>
+          <div class="chain-port"><span class="port-dot port-dot-b"></span><small>PORT 2</small></div>
+        </div>
+        <div class="diagram-equation"><span>T</span><sub>DUT</sub> = <span>T</span><sub>A</sub><sup>−1</sup> · <span>T</span><sub>Total</sub> · <span>T</span><sub>B</sub><sup>−1</sup></div>
+        <div class="diagram-foot"><span>Independent left / right fixture models</span><span>2X → 1X</span></div>
+      </div>
+    </section>
+
+    <section class="work-card" aria-labelledby="upload-title">
+      <div class="section-heading">
+        <div>
+          <div class="section-kicker">INPUT NETWORKS <span>·</span> TOUCHSTONE</div>
+          <h2 id="upload-title">添加三个测量文件</h2>
+        </div>
+        <div class="format-note"><span class="format-icon">⌁</span><span>支持 S2P / S4P<br><small>文本 Touchstone 格式</small></span></div>
+      </div>
+
+      <div class="upload-grid">
+        <article class="upload-card" data-slot="thru_a" id="card-thru-a">
+          <div class="upload-card-head"><span class="step-number">01</span><span class="required-tag">必需</span></div>
+          <div class="upload-visual fixture-a-visual"><span class="file-glyph"><svg viewBox="0 0 24 24" fill="none"><path d="M5 3.75h9l5 5v11.5H5z" stroke="currentColor" stroke-width="1.5"/><path d="M14 3.75v5h5M8 13h8M8 16.5h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="upload-plus">+</span></div>
+          <h3>2X Thru A</h3>
+          <p class="upload-desc">A 侧校准标准件<br><span>劈半提取左侧 1X A</span></p>
+          <div class="file-status" id="status-thru-a"><span class="file-status-dot"></span><span class="file-status-text">尚未选择文件</span></div>
+          <button class="choose-file-btn" type="button" data-for="file-thru-a">选择文件 <span>↗</span></button>
+          <input class="hidden-file" type="file" id="file-thru-a" accept=".s2p,.s4p,.snp,.ts,.txt">
+        </article>
+
+        <article class="upload-card upload-total" data-slot="total" id="card-total">
+          <div class="upload-card-head"><span class="step-number">02</span><span class="required-tag">必需</span></div>
+          <div class="upload-visual total-visual"><span class="file-glyph"><svg viewBox="0 0 24 24" fill="none"><path d="M5 3.75h9l5 5v11.5H5z" stroke="currentColor" stroke-width="1.5"/><path d="M14 3.75v5h5M8 13h8M8 16.5h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="upload-plus">+</span></div>
+          <h3>Total Network</h3>
+          <p class="upload-desc">Fixture A + DUT + Fixture B<br><span>待去嵌的整体测量</span></p>
+          <div class="file-status" id="status-total"><span class="file-status-dot"></span><span class="file-status-text">尚未选择文件</span></div>
+          <button class="choose-file-btn" type="button" data-for="file-total">选择文件 <span>↗</span></button>
+          <input class="hidden-file" type="file" id="file-total" accept=".s2p,.s4p,.snp,.ts,.txt">
+        </article>
+
+        <article class="upload-card" data-slot="thru_b" id="card-thru-b">
+          <div class="upload-card-head"><span class="step-number">03</span><span class="required-tag">必需</span></div>
+          <div class="upload-visual fixture-b-visual"><span class="file-glyph"><svg viewBox="0 0 24 24" fill="none"><path d="M5 3.75h9l5 5v11.5H5z" stroke="currentColor" stroke-width="1.5"/><path d="M14 3.75v5h5M8 13h8M8 16.5h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="upload-plus">+</span></div>
+          <h3>2X Thru B</h3>
+          <p class="upload-desc">B 侧校准标准件<br><span>劈半提取右侧 1X B</span></p>
+          <div class="file-status" id="status-thru-b"><span class="file-status-dot"></span><span class="file-status-text">尚未选择文件</span></div>
+          <button class="choose-file-btn" type="button" data-for="file-thru-b">选择文件 <span>↗</span></button>
+          <input class="hidden-file" type="file" id="file-thru-b" accept=".s2p,.s4p,.snp,.ts,.txt">
+        </article>
+      </div>
+
+      <section class="file-tools" id="file-tools" hidden aria-live="polite">
+        <div class="file-tools-heading"><span>01 / 映射关系</span><small>上传三份文件后自动识别端口数、差分对与参考面方向</small></div>
+        <div class="file-tools-grid mapping-tools-grid">
+          <article class="file-tool-cell mapping-cell map-cell-a">
+            <div class="tool-cell-top"><span class="tool-index">A</span><b>2X Thru A</b><span class="tool-mini-tag" id="map-kind-a">等待识别</span></div>
+            <div class="port-relation"><span class="port-pill" id="map-a-outer">P1</span><span class="relation-line">→</span><span class="port-pill port-pill-inner" id="map-a-split">P2</span></div>
+            <small class="relation-caption" id="map-note-a">外部端 → 劈半面，提取左侧 1X A</small>
+          </article>
+          <article class="file-tool-cell mapping-cell map-cell-total">
+            <div class="tool-cell-top"><span class="tool-index tool-index-blue">T</span><b>Total Network</b><span class="tool-mini-tag" id="map-kind-total">等待识别</span></div>
+            <div class="total-port-relation"><span class="port-pill" id="map-total-left">P1</span><span class="mini-module mini-a">1X A</span><span class="mini-module mini-dut">DUT</span><span class="mini-module mini-b">1X B</span><span class="port-pill port-pill-inner" id="map-total-right">P2</span></div>
+            <small class="relation-caption" id="map-note-total">左端参考面 → DUT → 右端参考面</small>
+          </article>
+          <article class="file-tool-cell mapping-cell map-cell-b">
+            <div class="tool-cell-top"><span class="tool-index tool-index-amber">B</span><b>2X Thru B</b><span class="tool-mini-tag" id="map-kind-b">等待识别</span></div>
+            <div class="port-relation"><span class="port-pill port-pill-inner" id="map-b-split">P1</span><span class="relation-line relation-line-amber">→</span><span class="port-pill port-pill-amber" id="map-b-outer">P2</span></div>
+            <small class="relation-caption" id="map-note-b">提取右侧 1X B，并翻转至 DUT → 外部端方向</small>
+          </article>
+        </div>
+
+        <div class="file-tools-heading chart-tools-heading"><span>02 / 生成 S 参数图</span><small>分别设置 A、Total、B 参数；下方单个按钮会将已填写的曲线叠加到同一张图（每个文件最多 8 个参数）</small></div>
+        <div class="file-tools-grid chart-tools-grid">
+          <article class="file-tool-cell chart-generator-cell">
+            <div class="tool-cell-top"><span class="plot-mark plot-mark-a">∿</span><b>2X Thru A</b></div>
+            <div class="generator-row"><input id="input-param-thru-a" type="text" value="S21" aria-label="2X Thru A 要绘制的 S 参数" placeholder="S21 / S11"></div>
+            <div class="quick-param-section">
+              <div class="quick-param-heading"><span>快捷点选</span><small>点击添加，再点移除</small></div>
+              <div class="quick-param-line"><div class="quick-param-list" id="quick-params-thru-a" role="group" aria-label="2X Thru A 常用 S 参数"></div><button type="button" class="quick-custom-toggle" data-custom-slot="thru_a" aria-expanded="false">＋ 自定义</button></div>
+              <div class="quick-custom-editor" id="quick-custom-editor-thru-a" hidden><input id="quick-custom-input-thru-a" type="text" maxlength="8" placeholder="参数名，如 SDD21" aria-label="添加 2X Thru A 的自定义快捷参数"><button type="button" class="quick-custom-add" data-custom-slot="thru_a">添加</button><small id="quick-custom-message-thru-a" class="quick-custom-message" aria-live="polite"></small></div>
+            </div>
+            <small class="generator-note" id="param-note-thru-a">单端支持 S11/S12/S21/S22</small>
+          </article>
+          <article class="file-tool-cell chart-generator-cell">
+            <div class="tool-cell-top"><span class="plot-mark plot-mark-total">∿</span><b>Total Network</b></div>
+            <div class="generator-row"><input id="input-param-total" type="text" value="S21" aria-label="Total Network 要绘制的 S 参数" placeholder="S21 / S11"></div>
+            <div class="quick-param-section">
+              <div class="quick-param-heading"><span>快捷点选</span><small>点击添加，再点移除</small></div>
+              <div class="quick-param-line"><div class="quick-param-list" id="quick-params-total" role="group" aria-label="Total Network 常用 S 参数"></div><button type="button" class="quick-custom-toggle" data-custom-slot="total" aria-expanded="false">＋ 自定义</button></div>
+              <div class="quick-custom-editor" id="quick-custom-editor-total" hidden><input id="quick-custom-input-total" type="text" maxlength="8" placeholder="参数名，如 SDD21" aria-label="添加 Total Network 的自定义快捷参数"><button type="button" class="quick-custom-add" data-custom-slot="total">添加</button><small id="quick-custom-message-total" class="quick-custom-message" aria-live="polite"></small></div>
+            </div>
+            <small class="generator-note" id="param-note-total">单端支持 S11/S12/S21/S22</small>
+          </article>
+          <article class="file-tool-cell chart-generator-cell">
+            <div class="tool-cell-top"><span class="plot-mark plot-mark-b">∿</span><b>2X Thru B</b></div>
+            <div class="generator-row"><input id="input-param-thru-b" type="text" value="S21" aria-label="2X Thru B 要绘制的 S 参数" placeholder="S21 / S11"></div>
+            <div class="quick-param-section">
+              <div class="quick-param-heading"><span>快捷点选</span><small>点击添加，再点移除</small></div>
+              <div class="quick-param-line"><div class="quick-param-list" id="quick-params-thru-b" role="group" aria-label="2X Thru B 常用 S 参数"></div><button type="button" class="quick-custom-toggle" data-custom-slot="thru_b" aria-expanded="false">＋ 自定义</button></div>
+              <div class="quick-custom-editor" id="quick-custom-editor-thru-b" hidden><input id="quick-custom-input-thru-b" type="text" maxlength="8" placeholder="参数名，如 SDD21" aria-label="添加 2X Thru B 的自定义快捷参数"><button type="button" class="quick-custom-add" data-custom-slot="thru_b">添加</button><small id="quick-custom-message-thru-b" class="quick-custom-message" aria-live="polite"></small></div>
+            </div>
+            <small class="generator-note" id="param-note-thru-b">单端支持 S11/S12/S21/S22</small>
+          </article>
+        </div>
+        <div class="combined-chart-actions"><small>将三个文件中已填写的参数曲线叠加显示；留空的文件会跳过。</small><button type="button" class="generate-chart-btn combined-chart-button" id="btn-generate-input-chart">生成组合图表（A + Total + B）</button></div>
+        <section class="input-chart-card" id="input-chart-panel" hidden>
+          <div class="input-chart-head"><div><div class="section-kicker">INPUT NETWORK PLOT</div><h3 id="input-chart-title">S 参数图</h3><p id="input-chart-subtitle">—</p></div><div class="plot-header-actions"><label class="plot-mode-select"><span>图表类型</span><select id="input-chart-view"><option value="sparam">S 参数</option><option value="tdr">TDR 阻抗</option></select></label><button id="btn-close-input-chart" type="button" aria-label="关闭图表">×</button></div></div>
+          <div class="input-chart-legend" id="input-chart-legend"></div>
+          <div class="tdr-controls" id="input-tdr-controls" hidden>
+            <label><span>反射端口</span><select id="input-tdr-port"><option value="1">Port 1 · S11 / SDD11</option><option value="2">Port 2 · S22 / SDD22</option></select></label>
+            <label><span>DC 外推</span><select id="input-tdr-dc"><option value="linear">线性外推</option><option value="hold">首点延拓</option></select></label>
+            <label><span>频域窗</span><select id="input-tdr-window"><option value="hamming">Hamming</option><option value="hann">Hann</option><option value="blackman">Blackman</option><option value="none">无窗</option></select></label>
+            <label><span>10–90% 上升时间</span><span class="tdr-input-with-unit"><input id="input-tdr-rise" type="number" min="0" max="10000" step="1" value="0"><i>ps</i></span></label>
+            <label class="tdr-time-range"><span>时间范围</span><span class="tdr-time-inputs"><input id="input-tdr-time-start" type="number" min="0" step="0.01" value="0" aria-label="TDR 起始时间 ns"><b>–</b><input id="input-tdr-time-end" type="number" min="0" step="0.01" placeholder="自动" aria-label="TDR 结束时间 ns"><i>ns</i></span></label>
+            <label><span>绘图点数</span><select id="input-tdr-display-points"><option value="6000">自动 / 高精度</option><option value="3000">最多 3000</option><option value="1000">最多 1000</option></select></label>
+          </div>
+          <small class="tdr-hint" id="input-tdr-hint">2X Thru A、Total、2X Thru B 阶跃阻抗将叠加显示，并统一到共同频段。时间分辨率受最高频率限制；DC 外推与频域窗会影响波形。</small>
+          <div class="tdr-status" id="input-tdr-status" hidden aria-live="polite"></div>
+          <div class="chart-axis-controls" id="input-chart-axis-controls">
+            <div class="axis-range-fields"><span>Y 轴</span><label><span>最小</span><input id="input-chart-y-min" type="number" step="any" placeholder="自动" aria-label="输入图 Y 轴最小值"></label><b>–</b><label><span>最大</span><input id="input-chart-y-max" type="number" step="any" placeholder="自动" aria-label="输入图 Y 轴最大值"></label><button id="btn-input-y-apply" type="button">应用</button><button id="btn-input-y-auto" type="button" class="axis-auto-button">自动</button></div>
+            <div class="axis-marker-fields"><label><span>X 标记</span><input id="input-chart-x-value" type="number" step="any" placeholder="悬停或输入" aria-label="输入图 X 标记位置"></label><i id="input-chart-x-unit">GHz</i><button id="btn-input-x-locate" type="button">定位</button></div>
+            <small class="axis-control-status" id="input-chart-axis-status" aria-live="polite">Y 轴留空时自动缩放；可输入 X 值并定位标记线。</small>
+          </div>
+          <div class="input-chart-wrap" id="input-chart-wrap"><canvas id="input-chart-canvas" role="img" aria-label="上传网络的 S 参数或 TDR 阻抗图"></canvas><div class="input-chart-point-markers" id="input-chart-point-markers" aria-hidden="true"></div><div class="input-chart-x-marker" id="input-chart-x-marker" hidden aria-hidden="true"><span id="input-chart-x-marker-label"></span></div><div class="input-chart-hover-readout" id="input-chart-hover-readout" hidden aria-live="polite"></div></div>
+          <div class="chart-footer"><span id="input-chart-y-label">幅度 (dB)</span><span id="input-chart-axis-label">频率 (GHz)</span></div>
+          <section class="fixture-stats" id="fixture-stats" hidden aria-live="polite">
+            <div class="fixture-stats-heading"><div><div class="section-kicker">2X THRU A / B DIAGNOSTICS</div><h4>差分参数交点频率</h4></div><small>按混合模幅度 (dB) 线性插值；“=”表示两曲线相交</small></div>
+            <div class="fixture-stats-grid">
+              <article class="fixture-stat-card"><h5>2X Thru A</h5><div class="fixture-stat-rows" id="fixture-stat-rows-a"></div></article>
+              <article class="fixture-stat-card"><h5>2X Thru B</h5><div class="fixture-stat-rows" id="fixture-stat-rows-b"></div></article>
+            </div>
+          </section>
+        </section>
+      </section>
+
+      <div class="upload-hint"><span class="hint-icon">i</span><p>每份 2X Thru 应对应同一侧夹具的背靠背标准件（A-A 与 B-B）。三份文件需为相同端口数；频率网格可不同，计算会在共同频段内对齐。</p></div>
+
+      <div class="controls-row">
+        <div class="control-group">
+          <label for="side-select">去嵌范围</label>
+          <select id="side-select">
+            <option value="both">双边 · 去除 A + B</option>
+            <option value="left">仅左侧 · 去除 A</option>
+            <option value="right">仅右侧 · 去除 B</option>
+          </select>
+        </div>
+        <div class="control-group port-map-control" id="port-map-control">
+          <label for="port-map-select">S4P 端口映射</label>
+          <select id="port-map-select">
+            <option value="auto">自动检测</option>
+            <option value="sequential">标准顺序 · 1/2 → 3/4</option>
+            <option value="plts">PLTS 交叉 · 1/3 → 2/4</option>
+          </select>
+        </div>
+        <div class="control-group z0-control">
+          <label for="z0-input">参考阻抗 Z₀</label>
+          <div class="input-suffix"><input id="z0-input" type="number" min="1" max="1000" step="1" value="50"><span>Ω</span></div>
+        </div>
+        <div class="run-control">
+          <button id="btn-run" class="run-button" type="button">
+            <span class="run-button-icon">⟶</span><span>开始去嵌</span>
+          </button>
+          <button id="btn-clear" class="clear-button" type="button" title="清空已选文件">重置</button>
+        </div>
+      </div>
+
+      <div class="algorithm-note"><span class="algorithm-mark">AFR</span><span><b>方法</b>　IEEE 370 NZC 2X Thru 劈半 + T 矩阵去嵌</span><span class="algorithm-sep"></span><span>单端 / 差分自动识别</span></div>
+    </section>
+
+    <section class="status-panel" id="status-panel" aria-live="polite">
+      <div class="status-spinner" id="status-spinner"></div>
+      <div class="status-copy"><strong id="status-title">等待输入文件</strong><span id="status-detail">选择 Total、2X Thru A 与 2X Thru B 后，即可运行计算。</span></div>
+      <span class="status-tag" id="status-tag">READY</span>
+    </section>
+
+    <section class="result-panel" id="result-panel" hidden>
+      <div class="result-header">
+        <div>
+          <div class="section-kicker">DE-EMBEDDING OUTPUT</div>
+          <h2>计算结果</h2>
+        </div>
+        <div class="result-summary" id="result-summary"></div>
+      </div>
+
+      <div class="metrics-grid">
+        <article class="metric-card"><span class="metric-label">网络拓扑</span><strong id="metric-topology">—</strong><small>由 Touchstone 端口数识别</small></article>
+        <article class="metric-card"><span class="metric-label">共同频段</span><strong id="metric-frequency">—</strong><small id="metric-points">—</small></article>
+        <article class="metric-card quality-metric" id="quality-card"><span class="metric-label">物理性检查 · 无源性</span><strong id="metric-passivity">—</strong><small id="metric-passivity-note">最大奇异值 σmax</small></article>
+        <article class="metric-card quality-metric" id="reciprocity-card"><span class="metric-label">互易性残差</span><strong id="metric-reciprocity">—</strong><small>max |Sij − Sji|</small></article>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-head chart-head-manual">
+          <div><div class="section-kicker" id="result-chart-kicker">FREQUENCY RESPONSE</div><h3 id="result-chart-title">自定义 S 参数幅度图</h3><p class="chart-subtitle" id="result-chart-subtitle">输入矩阵参数名，可用逗号分隔多个参数。</p></div>
+          <div class="result-chart-controls">
+            <label class="plot-mode-select"><span>图表类型</span><select id="result-chart-view"><option value="sparam">S 参数</option><option value="tdr">TDR 阻抗</option></select></label>
+            <div class="param-entry" id="chart-sparam-controls">
+              <label for="chart-params">查看 S 参数</label>
+              <div class="param-entry-row"><input id="chart-params" type="text" value="S21" placeholder="例如：S11, SDD21, SCD21" autocomplete="off" spellcheck="false"><button id="btn-plot-params" type="button">应用</button></div>
+              <div class="chart-error" id="chart-param-error" aria-live="polite"></div>
+            </div>
+          </div>
+        </div>
+        <div class="chart-options-row"><div class="param-chips" id="param-chips"></div><div class="network-toggles" id="network-toggles"></div></div>
+        <div class="tdr-controls" id="result-tdr-controls" hidden>
+          <label><span>反射端口</span><select id="result-tdr-port"><option value="1">Port 1 · S11 / SDD11</option><option value="2">Port 2 · S22 / SDD22</option></select></label>
+          <label><span>DC 外推</span><select id="result-tdr-dc"><option value="linear">线性外推</option><option value="hold">首点延拓</option></select></label>
+          <label><span>频域窗</span><select id="result-tdr-window"><option value="hamming">Hamming</option><option value="hann">Hann</option><option value="blackman">Blackman</option><option value="none">无窗</option></select></label>
+          <label><span>10–90% 上升时间</span><span class="tdr-input-with-unit"><input id="result-tdr-rise" type="number" min="0" max="10000" step="1" value="0"><i>ps</i></span></label>
+          <label class="tdr-time-range"><span>时间范围</span><span class="tdr-time-inputs"><input id="result-tdr-time-start" type="number" min="0" step="0.01" value="0" aria-label="TDR 起始时间 ns"><b>–</b><input id="result-tdr-time-end" type="number" min="0" step="0.01" placeholder="自动" aria-label="TDR 结束时间 ns"><i>ns</i></span></label>
+          <label><span>绘图点数</span><select id="result-tdr-display-points"><option value="6000">自动 / 高精度</option><option value="3000">最多 3000</option><option value="1000">最多 1000</option></select></label>
+        </div>
+        <small class="tdr-hint" id="result-tdr-hint">时间分辨率受最高频率限制；绘图点数仅控制显示抽取。DC 外推与频域窗会影响波形。</small>
+        <div class="tdr-status" id="result-tdr-status" hidden aria-live="polite"></div>
+        <div class="chart-legend" id="chart-legend"></div>
+        <div class="chart-axis-controls" id="result-chart-axis-controls">
+          <div class="axis-range-fields"><span>Y 轴</span><label><span>最小</span><input id="result-chart-y-min" type="number" step="any" placeholder="自动" aria-label="结果图 Y 轴最小值"></label><b>–</b><label><span>最大</span><input id="result-chart-y-max" type="number" step="any" placeholder="自动" aria-label="结果图 Y 轴最大值"></label><button id="btn-result-y-apply" type="button">应用</button><button id="btn-result-y-auto" type="button" class="axis-auto-button">自动</button></div>
+          <div class="axis-marker-fields"><label><span>X 标记</span><input id="result-chart-x-value" type="number" step="any" placeholder="悬停或输入" aria-label="结果图 X 标记位置"></label><i id="result-chart-x-unit">GHz</i><button id="btn-result-x-locate" type="button">定位</button></div>
+          <small class="axis-control-status" id="result-chart-axis-status" aria-live="polite">Y 轴留空时自动缩放；可输入 X 值并定位标记线。</small>
+        </div>
+        <div class="chart-wrap"><canvas id="chart-canvas" role="img" aria-label="自定义 S 参数幅度或 TDR 阻抗图"></canvas><div class="result-chart-points" id="result-chart-points" aria-hidden="true"></div><div class="result-chart-crosshair" id="result-chart-crosshair" hidden aria-hidden="true"></div><div class="chart-tooltip" id="chart-tooltip"></div></div>
+        <div class="chart-footer"><span id="chart-y-label">幅度 (dB)</span><span id="chart-frequency-label">频率 (GHz)</span></div>
+      </div>
+
+      <div class="export-card">
+        <div class="export-head"><div><div class="section-kicker">EXPORT</div><h3>导出 Touchstone</h3><p>完整频点数据，RI 格式；左右 1X 夹具为本次 2X Thru 劈半结果。</p></div><span class="export-icon">↓</span></div>
+        <div class="export-actions">
+          <a class="download-button download-primary" id="download-dut" href="#" download><span>↓</span><b>DUT 去嵌结果</b><small>.s2p</small></a>
+          <a class="download-button" id="download-a" href="#" download><span>↓</span><b>左夹具 1X A</b><small>.s2p</small></a>
+          <a class="download-button" id="download-b" href="#" download><span>↓</span><b>右夹具 1X B</b><small>.s2p</small></a>
+        </div>
+        <small class="download-status" id="download-status" role="status" aria-live="polite"></small>
+      </div>
+      <div class="result-disclaimer"><span>!</span><p>无源性/互易性指标是诊断提示，不构成校准质量保证。若曲线异常，请先核对 2X Thru 结构、端口顺序、参考阻抗和共同频段。</p></div>
+    </section>
+
+    <footer class="footer"><span>RF DE-EMBED WORKBENCH</span><span>Calculation runs on the connected workspace server · Touchstone files are not stored</span></footer>
+  </main>
+  <script src="/static/app.js?v=23" defer></script>
+</body>
+</html>
