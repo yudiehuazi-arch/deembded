@@ -8,7 +8,7 @@ from __future__ import annotations
 import skrf as rf
 
 from deembed import NetworkTriplet, PortMapping, TdrAnalyzer, TdrSettings, resolve_port_mapping
-from deembed.frequency import renormalize
+from deembed.frequency import FrequencyAligner, renormalize
 
 from ..cache import NetworkCacheStore
 from deembed.errors import CacheExpiredError, InvalidInputError
@@ -21,9 +21,16 @@ _ALLOWED_MAPPINGS = (PortMapping.AUTO, PortMapping.SEQUENTIAL, PortMapping.PLTS)
 
 
 class TdrService:
-    def __init__(self, caches: NetworkCacheStore, analyzer: TdrAnalyzer | None = None) -> None:
+    def __init__(
+        self,
+        caches: NetworkCacheStore,
+        analyzer: TdrAnalyzer | None = None,
+        *,
+        aligner: FrequencyAligner | None = None,
+    ) -> None:
         self.caches = caches
         self.analyzer = analyzer or TdrAnalyzer()
+        self.aligner = aligner or FrequencyAligner()
 
     # ------------------------------------------------------------------ 输入
     def input_stack(
@@ -48,7 +55,7 @@ class TdrService:
         self.analyzer.validate(settings, float(reference_z0))
 
         if slot == "all":
-            networks = {key: _prepared(network, reference_z0) for key, network in _triplet_items(triplet)}
+            networks = self._aligned_inputs(triplet, reference_z0)
             stack = self.analyzer.stack(networks, settings=settings, port_mapping=mapping, reference_z0=float(reference_z0))
             payload = stack.to_payload()
             payload.update({"success": True, "slot": "all", "port_mapping": mapping.value, **settings.summary()})
@@ -88,7 +95,7 @@ class TdrService:
         settings = TdrSettings.from_form(port=port, window=window, dc_method=dc_method, rise_time_ps=rise_time_ps)
         mapping = resolve_port_mapping(triplet.total, requested)
 
-        networks: dict[str, rf.Network] = {key: _prepared(network, reference_z0) for key, network in _triplet_items(triplet)}
+        networks: dict[str, rf.Network] = self._aligned_inputs(triplet, reference_z0)
         for key, network in computed.items():
             networks[key] = renormalize(network, float(reference_z0))
 
@@ -96,6 +103,19 @@ class TdrService:
         payload = stack.to_payload()
         payload.update({"success": True, "port_mapping": mapping.value, **settings.summary()})
         return payload  # type: ignore[return-value]
+
+
+    # ------------------------------------------------------------------ 内部
+    def _aligned_inputs(self, triplet: NetworkTriplet, reference_z0: float) -> dict[str, rf.Network]:
+        """归一化三个输入网络并对齐到共同频段（与去嵌流程使用同一网格）。
+
+        多条曲线共用一条时间轴：只有各网络的频率网格一致，采样步进才会
+        一致，否则前端按第一条曲线的时间轴绘制时会错位、出现断点。
+        """
+
+        keys = ("total", "thru_a", "thru_b")
+        prepared = [_prepared(network, reference_z0) for network in triplet]
+        return dict(zip(keys, self.aligner.align(prepared)))
 
 
 def _triplet_items(triplet: NetworkTriplet) -> tuple[tuple[str, rf.Network], ...]:

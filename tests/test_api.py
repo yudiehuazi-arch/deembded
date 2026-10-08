@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
+import skrf as rf
 from fastapi.testclient import TestClient
 
 from deembed import network_from_text, network_to_text
@@ -211,6 +212,32 @@ def test_tdr_input_and_result_flow(client: TestClient, se_preset, upload_factory
 
     expired = client.post("/api/tdr/input", data={"inspection_token": "nope", "slot": "all", **common})
     assert expired.status_code == 410
+
+
+def test_tdr_stack_shares_time_axis_across_mixed_grids(client: TestClient, se_preset, upload_factory) -> None:  # noqa: ANN001
+    """三份文件频率网格不同时，叠加的 TDR 曲线必须共享同一条时间轴（等长）。"""
+
+    resampled = se_preset.thru_2x_a.interpolate(rf.Frequency.from_f(np.linspace(0.2e9, 60e9, 301), unit="hz"))
+    files = {
+        "total": upload_factory(se_preset.total, "Total.s2p"),
+        "thru_a": upload_factory(resampled, "ThruA.s2p"),
+        "thru_b": upload_factory(se_preset.thru_2x_b, "ThruB.s2p"),
+    }
+    token = client.post("/api/inspect", files=files, data={"port_mapping": "auto"}).json()["inspection_token"]
+    result = client.post(
+        "/api/deembed",
+        data={"inspection_token": token, "side": "both", "port_mapping": "auto", "reference_z0": "50"},
+    ).json()
+
+    settings = {"port": "1", "port_mapping": "auto", "reference_z0": "50", "window": "hamming", "dc_method": "linear", "rise_time_ps": "0"}
+    stack = client.post("/api/tdr/input", data={"inspection_token": token, "slot": "all", **settings}).json()
+    assert {len(values) for values in stack["series"].values()} == {len(stack["time_ns"])}
+
+    result_stack = client.post(
+        "/api/tdr/result",
+        data={"inspection_token": token, "result_token": result["result_token"], **settings},
+    ).json()
+    assert {len(values) for values in result_stack["series"].values()} == {len(result_stack["time_ns"])}
 
 
 def test_tdr_validates_settings(client: TestClient, se_preset, upload_factory) -> None:  # noqa: ANN001

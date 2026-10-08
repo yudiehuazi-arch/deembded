@@ -73,6 +73,12 @@ class PreparedNetworks:
         return float(self.total.f[-1] / 1e9)
 
 
+def _restore_optional(network: rf.Network | None, mapping: PortMapping) -> rf.Network | None:
+    """还原可选网络到用户端口排布；``None`` 原样返回。"""
+
+    return None if network is None else restore_port_mapping(network, mapping)
+
+
 class DeembeddingEngine:
     """去嵌计算门面（Facade）。
 
@@ -203,13 +209,19 @@ class DeembeddingEngine:
             port_extension=request.port_extension,
         )
         result = self.strategy_for(request.method).apply(context)
+        mapping = prepared.port_mapping
 
-        dut = restore_port_mapping(result.dut, prepared.port_mapping)
+        # 结果对象对外的端口排布必须统一为“用户上传时的排布”：
+        # dut / 1X 夹具是在内部标准排布下算出的，需要还原；
+        # total 与两份标准件在 prepare 阶段已被重排成内部标准排布，同样要还原，
+        # 否则下游报表（ChartDataBuilder 会再按 port_mapping 重排一次）在
+        # PLTS 交叉时会把端口 2/3 二次交换，导致图表曲线与上传文件不一致。
+        dut = restore_port_mapping(result.dut, mapping)
         fixtures = None
         if result.fixtures is not None:
             fixtures = FixturePair(
-                left=restore_port_mapping(result.fixtures.left, prepared.port_mapping),
-                right=restore_port_mapping(result.fixtures.right, prepared.port_mapping),
+                left=restore_port_mapping(result.fixtures.left, mapping),
+                right=restore_port_mapping(result.fixtures.right, mapping),
             )
 
         return DeembedOutcome(
@@ -217,12 +229,12 @@ class DeembeddingEngine:
             quality=self.quality.analyze(dut),
             side=request.side,
             method=request.method,
-            port_mapping=prepared.port_mapping,
+            port_mapping=mapping,
             reference_z0=prepared.reference_z0,
-            total=prepared.total,
+            total=restore_port_mapping(prepared.total, mapping),
             fixtures=fixtures,
-            thru_a=prepared.standards.thru_a,
-            thru_b=prepared.standards.thru_b,
+            thru_a=_restore_optional(prepared.standards.thru_a, mapping),
+            thru_b=_restore_optional(prepared.standards.thru_b, mapping),
         )
 
     # ------------------------------------------------------------ 便捷入口

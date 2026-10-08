@@ -131,6 +131,51 @@ def test_engine_can_register_custom_strategy(engine) -> None:
     assert any(item["method"] == "single_2xthru" for item in engine.available_methods())
 
 
+def test_plts_outcome_keeps_uploaded_port_arrangement(engine) -> None:
+    """PLTS 交叉输入时，结果对象里的 total / 2X Thru 必须保持上传时的端口排布。
+
+    否则结果图表构建器会按 ``port_mapping`` 再重排一次，把端口 2/3 二次交换，
+    曲线与上传文件不一致（PLTS 直通通道会掉到 −240 dB 底噪）。
+    """
+
+    preset: DemoPreset = presets.get_preset("diff_dual_2xthru")
+
+    def to_plts_order(network):  # noqa: ANN001
+        reordered = network.copy()
+        reordered.renumber([0, 1, 2, 3], [0, 2, 1, 3])
+        return reordered
+
+    triplet = NetworkTriplet(*(to_plts_order(network) for network in preset.to_triplet()))
+    uploaded = {key: np.array(network.s, copy=True) for key, network in (("total", triplet.total), ("thru_a", triplet.thru_a), ("thru_b", triplet.thru_b))}
+
+    outcome = engine.deembed_triplet(triplet, port_mapping=PortMapping.PLTS)
+    display = outcome.display_networks()
+    for key, expected in uploaded.items():
+        assert np.allclose(display[key].s, expected, rtol=1e-12, atol=1e-15), key
+
+
+def test_plts_chart_uses_uploaded_networks(engine) -> None:
+    """PLTS 交叉时结果图表的混合模曲线必须与上传文件自身一致（防止二次重排回归）。"""
+
+    from deembed.mixed_mode import MixedModeConverter
+    from deembed.reporting import ChartDataBuilder
+
+    preset: DemoPreset = presets.get_preset("diff_dual_2xthru")
+
+    def to_plts_order(network):  # noqa: ANN001
+        reordered = network.copy()
+        reordered.renumber([0, 1, 2, 3], [0, 2, 1, 3])
+        return reordered
+
+    triplet = NetworkTriplet(*(to_plts_order(network) for network in preset.to_triplet()))
+    outcome = engine.deembed_triplet(triplet, port_mapping=PortMapping.PLTS)
+    chart = ChartDataBuilder().build(outcome.display_networks(), outcome.port_mapping)
+
+    expected = MixedModeConverter(PortMapping.PLTS).db_traces(triplet.thru_a)
+    for parameter in ("SDD21", "SDD11", "SCD21"):
+        assert np.allclose(chart.series[parameter]["thru_a"], expected[parameter], rtol=1e-9, atol=1e-9), parameter
+
+
 def test_deembed_triplet_convenience(engine) -> None:
     preset: DemoPreset = presets.get_preset("diff_dual_2xthru")
     def to_plts_order(network):  # noqa: ANN001
