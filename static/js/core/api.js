@@ -1,6 +1,6 @@
 /** 后端 API 客户端：统一表单提交、JSON 解析与错误语义。 */
 
-import { API_PATHS } from '../config/constants.js';
+import { API_PATHS, DEFAULT_SPLIT_ALGORITHM } from '../config/constants.js';
 
 export class ApiError extends Error {
   constructor(message, status) {
@@ -38,7 +38,14 @@ export class DeembedApi {
     return data;
   }
 
-  async deembed({ files = null, token = null, side = 'both', portMapping = 'auto', referenceZ0 = 50 }) {
+  async deembed({
+    files = null,
+    token = null,
+    side = 'both',
+    portMapping = 'auto',
+    referenceZ0 = 50,
+    splitAlgorithm = DEFAULT_SPLIT_ALGORITHM,
+  }) {
     const form = new FormData();
     if (files) {
       form.append('total', files.total, files.total.name);
@@ -50,6 +57,7 @@ export class DeembedApi {
     form.append('side', side);
     form.append('port_mapping', portMapping);
     form.append('reference_z0', String(referenceZ0));
+    form.append('split_algorithm', splitAlgorithm || DEFAULT_SPLIT_ALGORITHM);
     const { response, data } = await this._postForm(this.paths.deembed, form);
     if (!response.ok) throw new ApiError(data.detail || data.message || `服务器返回 HTTP ${response.status}`, response.status);
     if (data.success === false) throw new ApiError(data.detail || data.message || '计算未成功完成。', response.status);

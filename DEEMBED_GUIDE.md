@@ -17,6 +17,8 @@
    - 4.1 IEEE 370-2020 标准协议解析
    - 4.2 Keysight PLTS AFR（自动夹具剥离）与非对称校正（Length A ≠ B & Match A ≠ B）
    - 4.3 差分端口映射规则（PLTS 交叉排布 vs 标准顺序排布）
+   - 4.4 差分劈半算法：经典 MM-NZC 与“混合模 NZC + 模式转换”
+   - 4.5 与 PLTS AFR 结果不一致时的排查
 5. [时域反射 TDR 与阻抗剖面（$Z(t)$）计算](#5-时域反射-tdr-与阻抗剖面zt计算)
 6. [IEEE 370 Annex C 物理法则质量检验](#6-ieee-370-annex-c-物理法则质量检验)
 7. [内置典型工程预设与一键演练](#7-内置典型工程预设与一键演练)
@@ -212,10 +214,23 @@ IEEE 370 是针对 50 GHz 高速 PCB 与互连去嵌的权威国际标准，核�
   对去嵌后纯净 DUT 的物理可信度进行严苛筛查。
 
 ### 4.2 Keysight PLTS AFR（自动夹具剥离）对比
-是德科技（Keysight）PLTS 软件在业界被广泛用于高速测试夹具去嵌。本工具在算法与操作体验上高度对标 PLTS：
-1. **AFR 模式对标**：本工具的 `IEEE 370 2X Thru` 模式完全对应 PLTS 的 `Automatic Fixture Removal (AFR) 2X Thru Wizard`。
-2. **参考面平移对标**：本工具的 `File-Based` 模式对应 PLTS 的 `Reference Plane Adjustment`，支持直接输入左/右夹具文件进行 T 矩阵消去。
-3. **单边/双边自由控制**：PLTS 允许用户勾选 "Port 1 Correct" 或 "Port 2 Correct"，本工具提供一键切换【双边去嵌】、【单边左去嵌】、【单边右去嵌】。
+是德科技（Keysight）PLTS 软件在业界被广泛用于高速测试夹具去嵌。本工具的流程与 PLTS AFR 的
+“2X Thru A + 2X Thru B 分别劈半 → 级联反演”一致，但 **劈半算法本身不同**：本工具使用公开的
+IEEE 370 Annex A NZC（scikit-rf 参考实现），PLTS AFR 是 Keysight 的专有算法。两者在大多数夹具上
+结果接近，但不会逐点相同：
+
+| 项目 | 本工具（IEEE 370 NZC / scikit-rf） | PLTS AFR（据 Keysight 帮助文档） |
+| --- | --- | --- |
+| 劈半点 | 2X Thru 的 t21 冲激峰（半时延） | 时域确定，可编辑/手动指定 |
+| 时域门限 | 劈半点处 **硬截断**，无窗函数 | 时域（PLTS）或频域（PNA）门限，可设窗系数与阶跃上升时间 |
+| 劈半面阻抗 | TDR 在劈半点的取值 `z_x`，重归一化后再还原到 Z₀ | “Measured Fixture Z0”，支持自动迭代、Fine-Tune Impedance Matching |
+| 夹具 ≠ 2X Thru | NZC 无法修正（IEEE 370 ZC 才处理） | 可选 Impedance Correction、“characterization fixture ≠ DUT fixture”（从 Total 门控取 S11a/S22b） |
+| 差分模式转换 | 经典 MM-NZC 丢弃 SDC/SCD；新增“混合模 NZC + 模式转换”保留 | PLTS 2019 起夹具模型含模式转换（AFR Mode Conversion 自动） |
+| 高频端 | 无额外处理（最高频若干点对强反射敏感） | 可选 “Fitting thrus at high freq. ranges” 滚降补偿 |
+| 后处理 | 无（结果为纯数学去嵌） | 可选无源/互易性强制、DUT Gate、Deskew、去嵌后参考阻抗设为 Measured Fixture Z0 |
+
+其它对应关系：本工具的 `File-Based` 模式对应 PLTS 的 `Reference Plane Adjustment`（直接输入左/右夹具文件做 T 矩阵消去）；
+【双边 / 单边左 / 单边右】对应 PLTS 的 “Select ports to be corrected”。
 
 ### 4.3 差分端口映射规则
 不同仪器厂商和软件对 4 端口差分测试文件的端口定义存在经典差异：
@@ -227,6 +242,39 @@ IEEE 370 是针对 50 GHz 高速 PCB 与互连去嵌的权威国际标准，核�
   - 右侧差分对：端口 3（正极），端口 4（负极）
 
 本工具在界面中内置了端口映射下拉选择器与动态连线图示，后端自动执行矩阵索引重排（Renumbering），从根本上杜绝了差分/共模计算错乱的问题。
+
+### 4.4 差分劈半算法：经典 MM-NZC 与“混合模 NZC + 模式转换”
+界面上的【差分劈半算法】只影响差分 S4P（单端 S2P 始终使用 IEEE 370 SE-NZC）：
+
+- **混合模 NZC + 模式转换（默认）**：把 NZC 的每个标量推广为 `[d, c]` 模式基底下的 2×2 矩阵
+  （`P = (S11 − A11)·S21⁻¹`，`R = (S22 − B22)·S12⁻¹`，`W = (I − R·P)·S21 = K·Kᵀ`，K 取连续选支的对称平方根），
+  夹具模型保留 SDC/SCD。2X Thru 不含模式转换时与经典算法数值等价。实现见 `deembed/fixtures/mode_conversion.py`。
+- **IEEE 370 经典 MM-NZC**：scikit-rf `IEEEP370_MM_NZC_2xThru`，SDD 与 SCC 独立劈半，丢弃 SDC/SCD。
+
+夹具存在 P/N skew 时，经典算法会把夹具的模式转换留在 DUT 中：DUT 与夹具 skew 同向时 SDD21 偏低、反向时偏高，
+偏差 **随频率平滑增大**（小 skew 时约 ∝ f²）。内置预设 `diff_skew_dual_2xthru`（夹具 P 线长 0.3/0.2 mm，DUT 长 0.3 mm）中，
+经典算法在 17/34/50/67 GHz 分别偏低 0.08/0.33/0.80/1.56 dB，含模式转换的算法误差 < 0.01 dB。
+
+差分结果会同时给出另一种算法的 DUT（结果图中的“DUT · 对照算法”曲线，可单独下载），以及诊断卡片：
+2X Thru A/B 与 DUT 的 P/N skew 估计（`∠(S42·S31*) = ω·(τP − τN)` 的低频段拟合）、`max |SCD21|,|SDC21|`、
+两种算法的 ΔSDD21。已知局限：`W = K·Kᵀ` 只确定 K 到一个正交变换；对称根对应“模式转换沿夹具分布，或 DD/CC
+速度相同（带状线）”的情形。微带线（DD/CC 速度差明显）且 skew 集中在夹具一端时，任何只依赖 2X Thru 的方法都有不确定性。
+
+### 4.5 与 PLTS AFR 结果不一致时的排查
+按差异的 **形状** 判断来源：
+
+1. **平滑、随频率增大的偏差** → 先看诊断卡片：2X Thru 的 `max |SCD21|` 高于约 −30 dB、或 skew 超过约 0.5 ps 时，
+   夹具模式转换是主要嫌疑；与 PLTS 2019+ 比较时应使用“混合模 NZC + 模式转换”。若 PLTS 启用了 **Deskew**
+   （尤其是 “2X Thru and Fixtured DUT”），PLTS 还会去掉 DUT 自身的 skew，SDD21 会高于任何纯去嵌结果。
+2. **窄的向下凹陷（notch），整体趋势一致** → 典型原因是参考面处残留反射：Total 板上的发射端（连接器/过孔）或走线阻抗
+   与 2X Thru 测试条不一致，NZC 的夹具反射模型取自 2X Thru，无法反映这种差异。仿真中发射端 L/C 偏差 20%/30%
+   即可产生只向下、深约 0.3–0.7 dB 的周期性凹陷，与是否考虑模式转换无关。排查方法：在“生成组合图表 → TDR 阻抗”
+   中叠加 2X Thru A、Total、2X Thru B 的 Port 1（及 Port 2）阶跃阻抗，夹具段（尤其开头的发射端）应基本重合；
+   再看结果 TDR 中 DUT 两端是否有残留的阻抗台阶。PLTS 的窗函数门限、阻抗迭代或 DUT Gate 会把这类波纹压得更平。
+3. **只在最高频端发散** → IEEE 370 NZC 的硬截断在频段上限附近对强反射不稳定（经典与模式转换算法相同）；PLTS 有高频滚降拟合。
+4. **整体偏移且与参考阻抗相关** → 核对 PLTS 的 “Calibration Reference Z0 after removal”（System Z0 / Measured Fixture Z0）。
+5. **频率网格**：PLTS 要求起始频率等于步进；本工具会在内部插值到谐波网格（同 scikit-rf），三个文件网格不同时还会线性插值到 Total 的网格。
+   尽量用同一网格、start = step 测量。
 
 ---
 
@@ -285,6 +333,10 @@ IEEE 370 是针对 50 GHz 高速 PCB 与互连去嵌的权威国际标准，核�
 
 4. **预设 4: 差分 4-Port IEEE 370 2X Thru 混合模 AFR 去嵌**
    - 场景: 4 端口差分 2X Thru 标准件，支持 PLTS 交叉端口与顺序端口。
+
+5. **预设 `diff_skew_dual_2xthru`: 差分双 2X Thru，夹具含 P/N skew（模式转换）**
+   - 场景: 夹具 A/B 的 P 线分别长 0.3/0.2 mm，DUT 的 P 线长 0.3 mm（与夹具同向）。
+   - 演示效果: 经典 MM-NZC 的 SDD21 在高频明显偏低（67 GHz 约 −1.56 dB）且无源性不通过；“混合模 NZC + 模式转换”误差 < 0.01 dB。
 
 ---
 

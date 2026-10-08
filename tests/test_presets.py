@@ -10,7 +10,7 @@ from deembed.presets.base import PresetValidationError
 
 def test_catalog_lists_all_presets() -> None:
     catalog = presets.list_presets()
-    assert len(catalog) == 10
+    assert len(catalog) == 11
     assert {item["id"] for item in catalog} == set(presets.preset_ids())
     for item in catalog:
         assert item["title"] and item["description"]

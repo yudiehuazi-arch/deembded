@@ -13,7 +13,14 @@ from __future__ import annotations
 from typing import Callable, Final, Mapping
 
 from .base import DemoPreset, PresetValidationError
-from .differential import diff_2xthru, diff_asym_2xthru, diff_asym_file, diff_dual_2xthru, diff_file_based
+from .differential import (
+    diff_2xthru,
+    diff_asym_2xthru,
+    diff_asym_file,
+    diff_dual_2xthru,
+    diff_file_based,
+    diff_skew_dual_2xthru,
+)
 from .single_ended import se_2xthru, se_asym_2xthru, se_asym_file, se_dual_2xthru, se_file_based
 
 __all__ = ["DemoPreset", "PresetValidationError", "PRESETS", "get_preset", "list_presets", "preset_ids"]
@@ -30,6 +37,7 @@ PRESETS: Final[Mapping[str, Callable[[], DemoPreset]]] = {
     "diff_2xthru": diff_2xthru,
     "se_file_based": se_file_based,
     "diff_file_based": diff_file_based,
+    "diff_skew_dual_2xthru": diff_skew_dual_2xthru,
 }
 
 

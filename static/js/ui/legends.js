@@ -10,6 +10,7 @@ import {
   PARAMETER_COLORS,
 } from '../config/constants.js';
 import { $, clearChildren, createElement } from '../core/dom.js';
+import { networkLabel } from '../core/format.js';
 
 export class ChartLegend {
   constructor({ legendId, networkColors = NETWORK_DOT_COLORS, networkLabels = NETWORK_LABELS }) {
@@ -31,6 +32,10 @@ export class ChartLegend {
     container.appendChild(item);
   }
 
+  labelFor(key, calculation) {
+    return this.networkLabels === NETWORK_LABELS ? networkLabel(key, calculation) : this.networkLabels[key] || key;
+  }
+
   /** 结果图图例：S 参数模式按“参数 × 网络”，TDR 模式按网络。 */
   render({ calculation, activeParameters, networkKeys, mode, tdrData }) {
     if (!this.element) return;
@@ -43,7 +48,7 @@ export class ChartLegend {
         this.appendSwatch(this.element, {
           color: this.networkColors[key],
           dashed: (NETWORK_DASH[key] || []).length > 0,
-          text: `${this.networkLabels[key]} · ${tdrData.parameter} · ${Number(tdrData.reference_ohm).toFixed(0)} Ω`,
+          text: `${this.labelFor(key, calculation)} · ${tdrData.parameter} · ${Number(tdrData.reference_ohm).toFixed(0)} Ω`,
         });
       });
       return;
@@ -55,7 +60,7 @@ export class ChartLegend {
         this.appendSwatch(this.element, {
           color,
           dashed: key !== 'dut',
-          text: `${parameter} · ${this.networkLabels[key]}`,
+          text: `${parameter} · ${this.labelFor(key, calculation)}`,
         });
       });
     });

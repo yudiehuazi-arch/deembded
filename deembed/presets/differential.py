@@ -14,6 +14,7 @@ __all__ = [
     "diff_asym_file",
     "diff_asym_2xthru",
     "diff_dual_2xthru",
+    "diff_skew_dual_2xthru",
 ]
 
 
@@ -132,6 +133,37 @@ def diff_dual_2xthru() -> DemoPreset:
         fix_right=fix_b,
         fixture_symmetry="asymmetric",
         tags=("dual-2x-thru", "diff", "asymmetric"),
+    )
+
+
+def diff_skew_dual_2xthru() -> DemoPreset:
+    """预设 11：差分双 2X Thru，夹具含 P/N skew（模式转换）。
+
+    夹具 A 的 P 线比 N 线长 0.3 mm、夹具 B 长 0.2 mm，DUT 的 P 线也长 0.3 mm
+    （与夹具同向）。经典 IEEE 370 MM-NZC 丢弃夹具的 SDC/SCD，会让 DUT 的
+    SDD21 随频率增大而明显偏低；保留模式转换的混合模 NZC 可准确还原。
+    """
+
+    medium = propagation_medium()
+    fix_a = _skewed_pair(medium, 12.3e-3, 12e-3)
+    fix_b = _skewed_pair(medium, 24.2e-3, 24e-3)  # 外侧 → DUT 侧
+    dut = _skewed_pair(medium, 25.3e-3, 25e-3)
+    right = fix_b.flipped()
+    return DemoPreset(
+        id="diff_skew_dual_2xthru",
+        title="差分双 2X Thru：夹具 P/N skew（模式转换）",
+        description="夹具 A/B 的 P 线分别长 0.3/0.2 mm，DUT 的 P 线长 0.3 mm；对比经典 MM-NZC（丢弃 SDC/SCD）与含模式转换的混合模 NZC。",
+        method=FixtureMethod.DUAL_2X_THRU,
+        topology="diff",
+        total=fix_a**dut**right,
+        dut_ideal=dut,
+        thru_2x=fix_a**fix_a.flipped(),
+        thru_2x_a=fix_a**fix_a.flipped(),
+        thru_2x_b=fix_b**right,
+        fix_left=fix_a,
+        fix_right=right,
+        fixture_symmetry="asymmetric",
+        tags=("dual-2x-thru", "diff", "skew", "mode-conversion"),
     )
 
 

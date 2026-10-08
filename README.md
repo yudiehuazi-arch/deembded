@@ -19,11 +19,16 @@ python run_server.py                           # 默认 0.0.0.0:8000
 - `2X Thru A` / `2X Thru B`：左右两侧的背靠背校准标准件。
 - 支持 S2P / S4P Touchstone。三份文件端口数必须一致；频率网格可以不同，服务端会取共同频段对齐。
 - 差分 S4P 支持自动检测、标准顺序（[1,2 → 3,4]）与 PLTS 交叉（[1,3 → 2,4]）端口映射。
+- 差分劈半算法（表单字段 `split_algorithm`）：`mc_nzc`（默认，混合模 NZC + 模式转换，夹具模型保留 SDC/SCD，
+  对应 PLTS 2019+ AFR 的 Mode Conversion）或 `classic_nzc`（IEEE 370 经典 MM-NZC，丢弃模式转换）。
+  与 PLTS 结果的差异排查见 `DEEMBED_GUIDE.md` §4.4–4.5。
 
 ## 输出
 
 - 去嵌后的 DUT Touchstone（`.s2p` / `.s4p`）。
 - 从 2X Thru 劈半得到的左右 1X 夹具文件。
+- 差分 S4P 额外给出另一种劈半算法的 DUT（`dut_alt`，结果图“DUT · 对照算法”曲线，可下载），以及模式转换诊断：
+  2X Thru A/B 与 DUT 的 P/N skew、`max |SCD21|,|SDC21|`、两种算法的 ΔSDD21。
 - 自定义 S 参数幅度对比图、TDR 阶跃阻抗、无需导出的无源性/互易性诊断。
 
 已解析网络会在服务进程内临时缓存最多 10 分钟，供后续计算与 TDR 复用；原始 Touchstone 不做长期存储，

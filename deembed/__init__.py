@@ -11,8 +11,9 @@ deembed/
 ├── mixed_mode.py       混合模（SDD/SCC/SCD/SDC）转换
 ├── metrics.py          IEEE 370 Annex C 质量指标
 ├── reporting.py        图表/预览/夹具诊断数据
+├── diagnostics.py      差分 skew / 模式转换诊断与劈半算法对照
 ├── tdr.py              时域反射阶跃阻抗
-├── fixtures/           2X Thru 劈半与非对称校正
+├── fixtures/           2X Thru 劈半（经典 NZC / 含模式转换）与非对称校正
 ├── strategies/         可插拔去嵌策略（扩展点）
 ├── engine.py           引擎门面：prepare → strategy → quality
 └── presets/            内置合成示例（演示与测试）
@@ -57,8 +58,10 @@ from .models import (
     PortExtensionSettings,
     PortMapping,
     QualityReport,
+    SplitAlgorithm,
     TdrWindow,
 )
+from .diagnostics import ModeConversionDiagnostics, build_mode_conversion_diagnostics, estimate_pn_skew_ps
 from .port_mapping import auto_detect_port_mapping, mapping_label, pair_labels, resolve_port_mapping
 from .reporting import ChartDataBuilder, FixtureStatisticsAnalyzer, NetworkPreviewBuilder
 from .tdr import TdrAnalyzer, TdrSettings, TdrStack, TdrTrace
@@ -85,6 +88,7 @@ __all__ = [
     # 枚举
     "DeembedSide",
     "FixtureMethod",
+    "SplitAlgorithm",
     "PortMapping",
     "TdrWindow",
     "DcMethod",
@@ -100,6 +104,9 @@ __all__ = [
     "NetworkPreviewBuilder",
     "ChartDataBuilder",
     "FixtureStatisticsAnalyzer",
+    "ModeConversionDiagnostics",
+    "build_mode_conversion_diagnostics",
+    "estimate_pn_skew_ps",
     "auto_detect_port_mapping",
     "resolve_port_mapping",
     "pair_labels",

@@ -22,10 +22,15 @@ async def run_deembed(
     side: str = Form("both"),
     port_mapping: str = Form("auto"),
     reference_z0: float = Form(50.0),
+    split_algorithm: str = Form("mc_nzc"),
     inspection_token: str | None = Form(None),
     service: DeembeddingService = Depends(get_deembedding_service),
 ) -> DeembedPayload:
-    """执行 2X Thru 劈半 + T 矩阵去嵌，返回曲线数据与质量指标。"""
+    """执行 2X Thru 劈半 + T 矩阵去嵌，返回曲线数据与质量指标。
+
+    ``split_algorithm``（仅差分 S4P 生效）：``mc_nzc`` = 混合模 NZC + 模式转换（默认），
+    ``classic_nzc`` = IEEE 370 经典 MM-NZC。差分结果会附带另一种算法的 DUT 作对照。
+    """
 
     return await service.deembed(
         total=total,
@@ -34,6 +39,7 @@ async def run_deembed(
         side=side,
         port_mapping=port_mapping,
         reference_z0=reference_z0,
+        split_algorithm=split_algorithm,
         token=inspection_token,
     )
 

@@ -1,6 +1,6 @@
 /** 展示层格式化工具（纯函数，便于单元测试）。 */
 
-import { PARAMETER_PATTERN } from '../config/constants.js';
+import { NETWORK_LABELS, PARAMETER_PATTERN } from '../config/constants.js';
 
 export function formatSize(bytes) {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -41,4 +41,24 @@ export function formatAxisValue(value, digits = 3) {
 
 export function formatPoints(value) {
   return Number(value).toLocaleString('en-US');
+}
+
+/**
+ * 结果网络的显示名。差分结果带对照算法时，DUT 曲线标注各自的劈半算法，
+ * 便于与 PLTS 结果逐条比对。
+ */
+export function networkLabel(key, calculation = null) {
+  if (calculation?.comparison_label) {
+    if (key === 'dut' && calculation.split_algorithm_label) return `DUT · ${calculation.split_algorithm_label}`;
+    if (key === 'dut_alt') return `DUT · ${calculation.comparison_label}`;
+  }
+  return NETWORK_LABELS[key] || key;
+}
+
+/** 带符号的小数（+0.123 / −0.123），非有限值显示为 “—”。 */
+export function formatSigned(value, digits = 3) {
+  if (!Number.isFinite(value)) return '—';
+  const text = Math.abs(value).toFixed(digits);
+  if (Number(text) === 0) return text;
+  return `${value > 0 ? '+' : '−'}${text}`;
 }

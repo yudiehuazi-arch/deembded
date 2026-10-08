@@ -18,7 +18,15 @@ from dataclasses import dataclass
 
 import skrf as rf
 
-from ..models import DeembedSide, FixtureCorrection, FixtureMethod, FixturePair, FixtureStandardSet, PortExtensionSettings
+from ..models import (
+    DeembedSide,
+    FixtureCorrection,
+    FixtureMethod,
+    FixturePair,
+    FixtureStandardSet,
+    PortExtensionSettings,
+    SplitAlgorithm,
+)
 
 __all__ = ["StrategyContext", "StrategyResult", "DeembeddingStrategy"]
 
@@ -34,6 +42,7 @@ class StrategyContext:
     correction_a: FixtureCorrection = FixtureCorrection()
     correction_b: FixtureCorrection = FixtureCorrection()
     port_extension: PortExtensionSettings | None = None
+    split_algorithm: SplitAlgorithm = SplitAlgorithm.MODE_CONVERSION
 
     @property
     def nports(self) -> int:

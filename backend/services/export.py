@@ -10,7 +10,12 @@ from deembed.errors import CacheExpiredError, DeembedError, ErrorCode
 __all__ = ["ExportService", "EXPORT_LABELS"]
 
 #: 结果缓存键 → 下载文件名前缀
-EXPORT_LABELS = {"dut": "DUT_deembedded", "fix_a": "Fixture_A_1X", "fix_b": "Fixture_B_1X"}
+EXPORT_LABELS = {
+    "dut": "DUT_deembedded",
+    "fix_a": "Fixture_A_1X",
+    "fix_b": "Fixture_B_1X",
+    "dut_alt": "DUT_deembedded_compare",
+}
 
 
 class ExportService:

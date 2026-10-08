@@ -44,6 +44,7 @@ export const SLOT_KEYS = ['thru_a', 'total', 'thru_b'];
 export const NETWORK_LABELS = {
   total: 'Total',
   dut: 'DUT 去嵌',
+  dut_alt: 'DUT 对照算法',
   fix_a: '1X A',
   fix_b: '1X B',
   thru_a: '2X A',
@@ -53,6 +54,7 @@ export const NETWORK_LABELS = {
 export const NETWORK_DASH = {
   total: [6, 4],
   dut: [],
+  dut_alt: [10, 3, 2, 3],
   fix_a: [2, 3],
   fix_b: [8, 3, 2, 3],
   thru_a: [4, 2],
@@ -62,11 +64,22 @@ export const NETWORK_DASH = {
 export const NETWORK_DOT_COLORS = {
   total: '#91a5b8',
   dut: '#54e1d2',
+  dut_alt: '#ff8e6b',
   fix_a: '#67c98f',
   fix_b: '#f3b55f',
   thru_a: '#7aaeff',
   thru_b: '#e987ba',
 };
+
+/** 结果图默认勾选的网络（存在时） */
+export const DEFAULT_RESULT_NETWORKS = ['total', 'dut', 'dut_alt'];
+
+/** 差分 2X Thru 劈半算法（与后端 deembed.models.SplitAlgorithm 对应） */
+export const SPLIT_ALGORITHMS = {
+  mc_nzc: '混合模 NZC + 模式转换',
+  classic_nzc: 'IEEE 370 经典 MM-NZC',
+};
+export const DEFAULT_SPLIT_ALGORITHM = 'mc_nzc';
 
 export const PARAMETER_COLORS = ['#54e1d2', '#f3b55f', '#7aaeff', '#e987ba', '#bd93f9', '#a3e635', '#ff8e6b', '#5bc0eb'];
 

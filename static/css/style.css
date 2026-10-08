@@ -194,3 +194,34 @@
 }
 .download-status { display: block; min-height: 12px; margin-top: 7px; color: #78cfc7; font-size: 8px; }
 .download-status.is-error { color: #ff9292; }
+
+/* ---- 差分模式转换诊断（结果面板） ---- */
+.mc-diagnostics { margin: 0 0 12px; padding: 12px 13px; border: 1px solid rgba(127,151,174,.15); border-radius: 11px; background: rgba(8,16,26,.56); }
+.mc-diagnostics[hidden] { display: none; }
+.mc-diagnostics-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.mc-diagnostics-heading h4 { margin: 4px 0 0; color: #cfe0ed; font-size: 10px; }
+.mc-diagnostics-heading > small { color: #71879a; font-size: 8px; text-align: right; }
+.mc-diagnostics-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.25fr); gap: 10px; }
+.mc-diag-card { min-width: 0; padding: 8px 9px; border: 1px solid rgba(127,151,174,.13); border-radius: 7px; background: rgba(13,23,35,.68); }
+.mc-diag-card h5 { margin: 0 0 5px; color: #9fb5c8; font-size: 8px; }
+.mc-diag-card dl { margin: 0; }
+.mc-diag-row { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; font-size: 8px; line-height: 1.45; }
+.mc-diag-row dt { color: #6f8297; }
+.mc-diag-row dd { margin: 0; color: #c9d8e5; font-variant-numeric: tabular-nums; text-align: right; }
+.mc-diag-row.is-emphasis dd { color: #ffb08f; font-weight: 700; }
+.mc-diag-compare { border-color: rgba(255,142,107,.22); }
+.mc-diagnostics-hint { margin-top: 9px; padding: 8px 10px; border: 1px solid rgba(84,225,210,.16); border-radius: 7px; background: rgba(45,212,191,.05); color: #8fb4bd; }
+.mc-diagnostics-hint[hidden] { display: none; }
+.mc-diagnostics-hint.is-warn { border-color: rgba(248,184,91,.28); background: rgba(114,75,18,.1); color: #d9b27a; }
+.mc-diagnostics-hint p { margin: 0; font-size: 8.5px; line-height: 1.6; }
+.mc-diagnostics-hint p + p { margin-top: 4px; }
+.download-button.download-compare b { color: #ffb08f; }
+.download-button[hidden] { display: none; }
+@media (max-width: 900px) {
+  .mc-diagnostics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .mc-diagnostics-grid { grid-template-columns: minmax(0, 1fr); }
+  .mc-diagnostics-heading { flex-direction: column; align-items: flex-start; }
+  .mc-diagnostics-heading > small { text-align: left; }
+}

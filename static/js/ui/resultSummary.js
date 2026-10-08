@@ -1,8 +1,26 @@
 /** 结果面板：指标卡片、下载按钮、网络开关与参数芯片。 */
 
-import { MAX_CHART_PARAMETERS, NETWORK_DASH, NETWORK_DOT_COLORS, NETWORK_LABELS } from '../config/constants.js';
-import { $, clearChildren, createElement } from '../core/dom.js';
-import { formatScientific, sideLabel } from '../core/format.js';
+import { DEFAULT_RESULT_NETWORKS, MAX_CHART_PARAMETERS, NETWORK_DOT_COLORS, NETWORK_LABELS } from '../config/constants.js';
+import { $, clearChildren, createElement, setHidden } from '../core/dom.js';
+import { formatScientific, networkLabel, sideLabel } from '../core/format.js';
+import { ModeConversionPanel, NEGLIGIBLE_DELTA_DB } from './modeConversionPanel.js';
+
+/** 结果中实际存在的网络键（优先使用接口给出的 network_keys）。 */
+export function availableNetworkKeys(calculation) {
+  const declared = calculation?.chart?.network_keys;
+  if (Array.isArray(declared) && declared.length) return declared;
+  const keys = new Set();
+  Object.values(calculation?.chart?.series || {}).forEach((networks) => Object.keys(networks || {}).forEach((key) => keys.add(key)));
+  return [...keys];
+}
+
+/** 对照算法曲线仅在两种算法差异明显时默认勾选，避免重叠曲线干扰阅读。 */
+export function defaultNetworkChecked(key, calculation) {
+  if (!DEFAULT_RESULT_NETWORKS.includes(key)) return false;
+  if (key !== 'dut_alt') return true;
+  const delta = calculation?.diagnostics?.comparison?.max_delta_db;
+  return Number.isFinite(delta) && Math.abs(delta) >= NEGLIGIBLE_DELTA_DB;
+}
 
 export class ResultSummaryPanel {
   constructor({ state, onDownload, onSelectionChanged, onParameterChip }) {
@@ -10,6 +28,7 @@ export class ResultSummaryPanel {
     this.onDownload = onDownload;
     this.onSelectionChanged = onSelectionChanged;
     this.onParameterChip = onParameterChip;
+    this.modeConversion = new ModeConversionPanel();
   }
 
   setDownloadStatus(message, isError = false) {
@@ -27,6 +46,13 @@ export class ResultSummaryPanel {
       ['download-a', 'fix_a', `Fixture_A_1X.${extension}`],
       ['download-b', 'fix_b', `Fixture_B_1X.${extension}`],
     ];
+    const altLink = $('download-alt');
+    if (data.comparison_algorithm) {
+      downloads.push(['download-alt', 'dut_alt', `DUT_deembedded_${data.comparison_algorithm}.${extension}`]);
+      const label = altLink?.querySelector('b');
+      if (label) label.textContent = `DUT · ${data.comparison_label || '对照算法'}`;
+    }
+    setHidden(altLink, !data.comparison_algorithm);
     downloads.forEach(([id, networkKey, filename]) => {
       const link = $(id);
       if (!link) return;
@@ -47,7 +73,9 @@ export class ResultSummaryPanel {
     setText('metric-points', `${data.points.toLocaleString('en-US')} 个共同频点 · Z₀ ${data.reference_z0} Ω`);
     setText(
       'result-summary',
-      `${sideLabel(data.side)}${data.port_mapping ? ` · ${data.port_mapping === 'plts' ? 'PLTS 交叉映射' : '标准顺序映射'}` : ''}`,
+      `${sideLabel(data.side)}${data.port_mapping ? ` · ${data.port_mapping === 'plts' ? 'PLTS 交叉映射' : '标准顺序映射'}` : ''}${
+        data.split_algorithm_label ? ` · ${data.split_algorithm_label}` : ''
+      }`,
     );
 
     const quality = data.quality || {};
@@ -75,22 +103,25 @@ export class ResultSummaryPanel {
     if (error) error.textContent = '';
 
     this.buildParameterChips(data.nports);
-    this.buildNetworkToggles();
+    this.buildNetworkToggles(data);
+    this.modeConversion.render(data);
     return initial;
   }
 
-  buildNetworkToggles() {
+  buildNetworkToggles(calculation = this.state?.calculation) {
     const container = $('network-toggles');
     if (!container) return;
     clearChildren(container);
-    Object.entries(NETWORK_LABELS).forEach(([key, label]) => {
+    const available = new Set(availableNetworkKeys(calculation));
+    Object.keys(NETWORK_LABELS).forEach((key) => {
+      if (available.size && !available.has(key)) return;
       const wrapper = createElement('label', { className: 'network-toggle' });
       const input = createElement('input', { attrs: { type: 'checkbox' } });
       input.dataset.network = key;
-      input.checked = key === 'total' || key === 'dut';
+      input.checked = defaultNetworkChecked(key, calculation);
       const dot = createElement('i', { className: 'network-color' });
       dot.style.background = NETWORK_DOT_COLORS[key];
-      wrapper.append(input, dot, document.createTextNode(label));
+      wrapper.append(input, dot, document.createTextNode(networkLabel(key, calculation)));
       input.addEventListener('change', () => this.onSelectionChanged?.());
       container.appendChild(wrapper);
     });
@@ -113,7 +144,7 @@ export class ResultSummaryPanel {
   }
 
   attachDownloads() {
-    ['download-dut', 'download-a', 'download-b'].forEach((id) => {
+    ['download-dut', 'download-a', 'download-b', 'download-alt'].forEach((id) => {
       const link = $(id);
       link?.addEventListener('click', (event) => this.handleDownload(event, link.dataset.networkKey, link.dataset.filename));
     });

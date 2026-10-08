@@ -8,9 +8,9 @@ import skrf as rf
 
 from ..errors import InvalidInputError
 from ..fixtures.corrections import adjust_fixture_delay_loss
-from ..fixtures.nzc_2xthru import EXTRACTORS, Nzc2xThruExtractor, get_extractor
+from ..fixtures.nzc_2xthru import Nzc2xThruExtractor, get_extractor
 from ..matrices import deembed_network
-from ..models import FixtureMethod, FixturePair
+from ..models import FixtureMethod, FixturePair, SplitAlgorithm
 from .base import DeembeddingStrategy, StrategyContext, StrategyResult
 
 __all__ = ["DualTwoXThruStrategy", "SingleTwoXThruStrategy"]
@@ -20,12 +20,15 @@ class _TwoXThruStrategyBase(DeembeddingStrategy):
     """2X Thru 策略公共逻辑：劈半 → 非对称校正 → 级联反演。"""
 
     def __init__(self, extractors: Mapping[int, Nzc2xThruExtractor] | None = None) -> None:
-        self.extractors = dict(extractors or EXTRACTORS)
+        #: 显式覆盖的劈半器（端口数 → 劈半器），优先于 ``split_algorithm`` 的选择
+        self.extractors = dict(extractors or {})
 
-    def extractor_for(self, nports: int) -> Nzc2xThruExtractor:
+    def extractor_for(
+        self, nports: int, algorithm: SplitAlgorithm = SplitAlgorithm.MODE_CONVERSION
+    ) -> Nzc2xThruExtractor:
         extractor = self.extractors.get(nports)
         if extractor is None:
-            return get_extractor(nports)
+            return get_extractor(nports, algorithm)
         return extractor
 
     def apply(self, context: StrategyContext) -> StrategyResult:  # pragma: no cover - 由子类覆盖
@@ -35,8 +38,8 @@ class _TwoXThruStrategyBase(DeembeddingStrategy):
         dut = deembed_network(context.total, left=fixtures.left, right=fixtures.right, side=context.side)
         return StrategyResult(dut=dut, fixtures=fixtures)
 
-    def _correct(self, fixture: rf.Network, delay_ps: float, loss_db: float) -> rf.Network:
-        return adjust_fixture_delay_loss(fixture, delta_delay_ps=delay_ps, delta_loss_db=loss_db)
+    def _correct(self, fixture: rf.Network, delay_ps: float, loss_db: float, *, dut_side: str = "second") -> rf.Network:
+        return adjust_fixture_delay_loss(fixture, delta_delay_ps=delay_ps, delta_loss_db=loss_db, dut_side=dut_side)
 
 
 class DualTwoXThruStrategy(_TwoXThruStrategyBase):
@@ -56,11 +59,12 @@ class DualTwoXThruStrategy(_TwoXThruStrategyBase):
         thru_b = context.standards.thru_b
         if thru_a is None or thru_b is None:
             raise InvalidInputError("请上传 Total、2X Thru A 与 2X Thru B，或使用有效的识别缓存。")
-        extractor = self.extractor_for(context.nports)
+        extractor = self.extractor_for(context.nports, context.split_algorithm)
         left = extractor.split(thru_a, z0=context.z0).left
         right = extractor.split(thru_b, z0=context.z0).right
         left = self._correct(left, context.correction_a.delay_ps, context.correction_a.loss_db)
-        right = self._correct(right, context.correction_b.delay_ps, context.correction_b.loss_db)
+        # 右夹具处于级联方向（端口 1/2 = DUT 侧），校正作用在第一组端口
+        right = self._correct(right, context.correction_b.delay_ps, context.correction_b.loss_db, dut_side="first")
         return self._finalize(context, FixturePair(left=left, right=right))
 
 
@@ -76,7 +80,9 @@ class SingleTwoXThruStrategy(_TwoXThruStrategyBase):
         thru = context.standards.thru_a or context.standards.thru_b
         if thru is None:
             raise InvalidInputError("当前去嵌方法需要 2X Thru 标准件文件。")
-        split = self.extractor_for(context.nports).split(thru, z0=context.z0)
+        split = self.extractor_for(context.nports, context.split_algorithm).split(thru, z0=context.z0)
         left = self._correct(split.left, context.correction_a.delay_ps, context.correction_a.loss_db)
-        right = self._correct(split.right, context.correction_b.delay_ps, context.correction_b.loss_db)
+        right = self._correct(
+            split.right, context.correction_b.delay_ps, context.correction_b.loss_db, dut_side="first"
+        )
         return self._finalize(context, FixturePair(left=left, right=right))

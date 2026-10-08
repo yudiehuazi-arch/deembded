@@ -134,6 +134,42 @@ test('运行去嵌后渲染指标、下载链接与图例，并校验参数输�
   assert.equal($('chart-legend').children.length, 4);
 });
 
+test('差分劈半算法：默认含模式转换，切换后提示重算并随请求发送；诊断面板与对照下载可用', async () => {
+  const { workbench, calls } = setup();
+  selectThreeFiles(workbench);
+  await flush();
+  assert.equal($('split-algorithm-select').value, 'mc_nzc');
+  assert.equal($('split-algorithm-select').disabled, false);
+  await runDeembed(workbench);
+
+  const first = calls.filter((call) => call.url === '/api/deembed').at(-1);
+  assert.equal(first.form.get('split_algorithm'), 'mc_nzc');
+  assert.match($('result-summary').textContent, /混合模 NZC \+ 模式转换/);
+
+  // 诊断面板（示例数据无模式转换 → 差异可忽略的提示）
+  assert.equal($('mc-diagnostics').hidden, false);
+  assert.match($('mc-diag-thru-a').textContent, /P\/N skew/);
+  assert.match($('mc-diagnostics-hint').textContent, /差异 < 0\.05 dB/);
+
+  // 对照算法：下载按钮与网络开关（差异可忽略时默认不勾选）
+  assert.equal($('download-alt').hidden, false);
+  assert.equal($('download-alt').getAttribute('download'), 'DUT_deembedded_classic_nzc.s4p');
+  assert.match($('download-alt').getAttribute('href'), /\/dut_alt$/);
+  const altToggle = document.querySelector('#network-toggles input[data-network="dut_alt"]');
+  assert.ok(altToggle, '应提供对照算法曲线开关');
+  assert.equal(altToggle.checked, false);
+  assert.match(altToggle.parentElement.textContent, /DUT · IEEE 370 经典 MM-NZC/);
+  altToggle.checked = true;
+  altToggle.dispatchEvent(new window.Event('change'));
+  assert.equal($('chart-legend').children.length, 3);
+
+  change('split-algorithm-select', 'classic_nzc');
+  assert.equal($('status-tag').textContent, 'RE-RUN');
+  await runDeembed(workbench);
+  const second = calls.filter((call) => call.url === '/api/deembed').at(-1);
+  assert.equal(second.form.get('split_algorithm'), 'classic_nzc');
+});
+
 test('结果 TDR 视图请求后端、刷新状态与图例', async () => {
   const { workbench, calls } = setup({
     tdrResult: ({ form }) => ({ ...fixtures.tdrResult, parameter: form.get('port') === '2' ? 'SDD22' : 'SDD11' }),
@@ -252,6 +288,7 @@ test('重置清空文件、面板与状态', async () => {
   assert.equal($('status-tag').textContent, 'READY');
   assert.equal($('status-thru-a').textContent.trim(), '尚未选择文件');
   assert.equal($('chart-legend').children.length, 0);
+  assert.equal($('mc-diagnostics').hidden, true);
   assert.equal(workbench.state.files.total, null);
 });
 

@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#080d16">
   <title>RF De-embedding Workbench</title>
-  <link rel="stylesheet" href="/static/css/base.css?v=24">
-  <link rel="stylesheet" href="/static/css/style.css?v=24">
+  <link rel="stylesheet" href="/static/css/base.css?v=25">
+  <link rel="stylesheet" href="/static/css/style.css?v=25">
 </head>
 <body>
   <div class="ambient ambient-a"></div>
@@ -207,6 +207,13 @@
             <option value="plts">PLTS 交叉 · 1/3 → 2/4</option>
           </select>
         </div>
+        <div class="control-group split-algorithm-control" id="split-algorithm-control">
+          <label for="split-algorithm-select">差分劈半算法</label>
+          <select id="split-algorithm-select" aria-describedby="split-algorithm-help">
+            <option value="mc_nzc" selected>混合模 NZC + 模式转换 · 对齐 PLTS AFR</option>
+            <option value="classic_nzc">IEEE 370 经典 MM-NZC · 忽略模式转换</option>
+          </select>
+        </div>
         <div class="control-group z0-control">
           <label for="z0-input">参考阻抗 Z₀</label>
           <div class="input-suffix"><input id="z0-input" type="number" min="1" max="1000" step="1" value="50"><span>Ω</span></div>
@@ -219,7 +226,7 @@
         </div>
       </div>
 
-      <div class="algorithm-note"><span class="algorithm-mark">AFR</span><span><b>方法</b>　IEEE 370 NZC 2X Thru 劈半 + T 矩阵去嵌</span><span class="algorithm-sep"></span><span>单端 / 差分自动识别</span></div>
+      <div class="algorithm-note"><span class="algorithm-mark">AFR</span><span><b>方法</b>　IEEE 370 NZC 2X Thru 劈半 + T 矩阵去嵌</span><span class="algorithm-sep"></span><span>单端 / 差分自动识别</span><span class="algorithm-sep"></span><span id="split-algorithm-help">差分默认在夹具模型中保留 SDC/SCD 模式转换（PLTS 2019+ AFR 同样如此），经典 MM-NZC 会丢弃它；结果中附另一种算法作对照</span></div>
     </section>
 
     <section class="status-panel" id="status-panel" aria-live="polite">
@@ -243,6 +250,20 @@
         <article class="metric-card quality-metric" id="quality-card"><span class="metric-label">物理性检查 · 无源性</span><strong id="metric-passivity">—</strong><small id="metric-passivity-note">最大奇异值 σmax</small></article>
         <article class="metric-card quality-metric" id="reciprocity-card"><span class="metric-label">互易性残差</span><strong id="metric-reciprocity">—</strong><small>max |Sij − Sji|</small></article>
       </div>
+
+      <section class="mc-diagnostics" id="mc-diagnostics" hidden aria-live="polite">
+        <div class="mc-diagnostics-heading">
+          <div><div class="section-kicker">MODE CONVERSION / SKEW</div><h4>差分模式转换诊断</h4></div>
+          <small id="mc-diagnostics-note">—</small>
+        </div>
+        <div class="mc-diagnostics-grid">
+          <article class="mc-diag-card"><h5>2X Thru A</h5><dl id="mc-diag-thru-a"></dl></article>
+          <article class="mc-diag-card"><h5>2X Thru B</h5><dl id="mc-diag-thru-b"></dl></article>
+          <article class="mc-diag-card"><h5>DUT（去嵌后）</h5><dl id="mc-diag-dut"></dl></article>
+          <article class="mc-diag-card mc-diag-compare"><h5 id="mc-diag-compare-title">算法对照 ΔSDD21</h5><dl id="mc-diag-compare"></dl></article>
+        </div>
+        <div class="mc-diagnostics-hint" id="mc-diagnostics-hint" hidden></div>
+      </section>
 
       <div class="chart-card">
         <div class="chart-head chart-head-manual">
@@ -283,6 +304,7 @@
           <a class="download-button download-primary" id="download-dut" href="#" download><span>↓</span><b>DUT 去嵌结果</b><small>.s2p</small></a>
           <a class="download-button" id="download-a" href="#" download><span>↓</span><b>左夹具 1X A</b><small>.s2p</small></a>
           <a class="download-button" id="download-b" href="#" download><span>↓</span><b>右夹具 1X B</b><small>.s2p</small></a>
+          <a class="download-button download-compare" id="download-alt" href="#" download hidden><span>↓</span><b>DUT · 对照算法</b><small>.s4p</small></a>
         </div>
         <small class="download-status" id="download-status" role="status" aria-live="polite"></small>
       </div>
@@ -291,6 +313,6 @@
 
     <footer class="footer"><span>RF DE-EMBED WORKBENCH</span><span>Calculation runs on the connected workspace server · Touchstone files are not stored</span></footer>
   </main>
-  <script type="module" src="/static/js/main.js?v=24"></script>
+  <script type="module" src="/static/js/main.js?v=25"></script>
 </body>
 </html>

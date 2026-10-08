@@ -1,6 +1,7 @@
 /** 曲线构造：把接口数据转换为 renderer 需要的 trace 列表（纯函数）。 */
 
-import { INPUT_PARAMETER_DASHES, INPUT_TDR_COLORS, INPUT_TDR_NETWORK_LABELS, INPUT_TDR_NETWORK_ORDER, MAX_CHART_PARAMETERS, NETWORK_DASH, NETWORK_DOT_COLORS, NETWORK_LABELS, PARAMETER_COLORS } from '../config/constants.js';
+import { INPUT_PARAMETER_DASHES, INPUT_TDR_COLORS, INPUT_TDR_NETWORK_LABELS, INPUT_TDR_NETWORK_ORDER, MAX_CHART_PARAMETERS, NETWORK_DASH, NETWORK_DOT_COLORS, PARAMETER_COLORS } from '../config/constants.js';
+import { networkLabel } from '../core/format.js';
 
 /** 结果图表（频域）：参数 × 网络 → 曲线 */
 export function buildResultSparamTraces(calculation, parameters, networkKeys) {
@@ -16,7 +17,7 @@ export function buildResultSparamTraces(calculation, parameters, networkKeys) {
         dash: NETWORK_DASH[networkKey] || [],
         width: networkKey === 'dut' ? 2.2 : 1.45,
         alpha: networkKey === 'dut' ? 1 : 0.78,
-        label: `${parameter} · ${NETWORK_LABELS[networkKey] || networkKey}`,
+        label: `${parameter} · ${networkLabel(networkKey, calculation)}`,
         networkKey,
         parameter,
       });
@@ -26,7 +27,7 @@ export function buildResultSparamTraces(calculation, parameters, networkKeys) {
 }
 
 /** 结果图表（时域）：每条网络一条阶跃阻抗曲线 */
-export function buildResultTdrTraces(display, networkKeys, parameter) {
+export function buildResultTdrTraces(display, networkKeys, parameter, calculation = null) {
   return networkKeys
     .filter((key) => display.series?.[key])
     .map((key) => ({
@@ -35,7 +36,7 @@ export function buildResultTdrTraces(display, networkKeys, parameter) {
       dash: NETWORK_DASH[key] || [],
       width: key === 'dut' ? 2.2 : 1.6,
       alpha: key === 'dut' ? 1 : 0.82,
-      label: `${NETWORK_LABELS[key] || key} · ${parameter}`,
+      label: `${networkLabel(key, calculation)} · ${parameter}`,
       networkKey: key,
     }));
 }

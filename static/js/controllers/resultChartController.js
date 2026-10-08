@@ -205,7 +205,7 @@ export class ResultChartController extends ChartFlowController {
         xUnit: 'ns',
         yUnit: 'Ω',
         xDecimals: 3,
-        traces: buildResultTdrTraces(display, keys, this.tdrData.parameter),
+        traces: buildResultTdrTraces(display, keys, this.tdrData.parameter, calculation),
       };
     }
 

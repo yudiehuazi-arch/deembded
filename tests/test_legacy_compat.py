@@ -60,7 +60,8 @@ def test_legacy_names_are_importable_from_both_paths(name):
 def test_legacy_preset_registry_matches_v2_ids():
     assert sorted(legacy.PRESETS) == sorted(LEGACY_PRESETS)
     assert sorted(shim.PRESETS) == sorted(LEGACY_PRESETS)
-    assert sorted(legacy.PRESETS) == sorted(__import__("deembed").presets.preset_ids())
+    # v1 注册表保持冻结；v2 可以新增预设（如 diff_skew_dual_2xthru），但必须覆盖全部 v1 预设
+    assert set(legacy.PRESETS) <= set(__import__("deembed").presets.preset_ids())
 
 
 def test_legacy_preset_payload_keeps_v1_keys(se_preset):

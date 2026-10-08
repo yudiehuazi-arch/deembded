@@ -11,7 +11,7 @@
  * 各自封装在对应的面板类里。
  */
 
-import { SLOT_UI } from './config/constants.js';
+import { DEFAULT_SPLIT_ALGORITHM, SLOT_UI } from './config/constants.js';
 import { ApiError, DeembedApi } from './core/api.js';
 import { $, setHidden } from './core/dom.js';
 import { WorkbenchState } from './core/state.js';
@@ -89,6 +89,9 @@ export class Workbench {
       this.notifySettingChanged('参考阻抗已更改', '请重新运行去嵌，以按新的 Z₀ 重新归一化并计算。');
       this.inputChart.reloadTdrIfActive();
     });
+    $('split-algorithm-select')?.addEventListener('change', () =>
+      this.notifySettingChanged('差分劈半算法已更改', '请重新运行去嵌；另一种算法的结果会作为对照曲线保留在结果图中。'),
+    );
     window.addEventListener('resize', () => {
       this.resultChart.draw();
       this.inputChart.draw();
@@ -135,6 +138,7 @@ export class Workbench {
       if (generation !== this.state.inspectionGeneration) return;
       this.state.inspection = data;
       this.mapping.render(data);
+      this.syncSplitAlgorithmControl(data.nports);
       if (this.state.calculationBusy) return;
       if (this.state.mappingRecalcNeeded && this.state.calculation) {
         this.status.set('ready', '映射图已更新', '当前去嵌结果仍使用旧端口映射，请重新运行计算。', 'RE-RUN');
@@ -191,6 +195,7 @@ export class Workbench {
     const cachedToken = this.state.inspection?.inspection_token || null;
     const side = $('side-select')?.value || 'both';
     const portMapping = $('port-map-select')?.value || 'auto';
+    const splitAlgorithm = this.readSplitAlgorithm();
 
     this.setBusy(true);
     this.status.set(
@@ -201,7 +206,7 @@ export class Workbench {
     );
 
     try {
-      const data = await this.deembedWithFallback({ cachedToken, side, portMapping, referenceZ0 });
+      const data = await this.deembedWithFallback({ cachedToken, side, portMapping, referenceZ0, splitAlgorithm });
       this.updateResults(data);
       this.status.set('success', '去嵌完成', `${data.message} · ${data.points.toLocaleString('en-US')} 个共同频点。`, 'DONE');
     } catch (error) {
@@ -211,15 +216,28 @@ export class Workbench {
     }
   }
 
-  async deembedWithFallback({ cachedToken, side, portMapping, referenceZ0 }) {
+  async deembedWithFallback({ cachedToken, side, portMapping, referenceZ0, splitAlgorithm = DEFAULT_SPLIT_ALGORITHM }) {
     try {
-      return await this.api.deembed({ token: cachedToken, side, portMapping, referenceZ0 });
+      return await this.api.deembed({ token: cachedToken, side, portMapping, referenceZ0, splitAlgorithm });
     } catch (error) {
       if (error instanceof ApiError && error.status === 410 && cachedToken) {
-        return this.api.deembed({ files: this.state.files, side, portMapping, referenceZ0 });
+        return this.api.deembed({ files: this.state.files, side, portMapping, referenceZ0, splitAlgorithm });
       }
       throw error;
     }
+  }
+
+  readSplitAlgorithm() {
+    return $('split-algorithm-select')?.value || DEFAULT_SPLIT_ALGORITHM;
+  }
+
+  /** 劈半算法只影响差分 S4P；单端 S2P 时禁用选择框。 */
+  syncSplitAlgorithmControl(nports) {
+    const select = $('split-algorithm-select');
+    if (!select) return;
+    const singleEnded = nports === 2;
+    select.disabled = singleEnded;
+    select.title = singleEnded ? '单端 S2P 始终使用 IEEE 370 SE-NZC 劈半' : '';
   }
 
   setBusy(busy) {
@@ -282,6 +300,8 @@ export class Workbench {
     });
     this.inputChart.reset();
     this.resultChart.reset();
+    this.summary.modeConversion.reset();
+    this.syncSplitAlgorithmControl(null);
     setHidden(this.resultPanel, true);
     setHidden(this.fileTools, true);
     this.summary.setDownloadStatus('');

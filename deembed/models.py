@@ -19,6 +19,7 @@ __all__ = [
     "DeembedSide",
     "PortMapping",
     "FixtureMethod",
+    "SplitAlgorithm",
     "TdrWindow",
     "DcMethod",
     "NetworkTriplet",
@@ -78,6 +79,34 @@ class FixtureMethod(_StrEnum):
     SINGLE_2X_THRU = "single_2xthru"  # 单条 2X Thru，对称劈半后左右复用
     FIXTURE_FILES = "fixture_files"   # 用户直接提供左右 1X 夹具文件
     PORT_EXTENSION = "port_extension"  # 端口延伸（时延/损耗剥离），无需夹具文件
+
+
+class SplitAlgorithm(_StrEnum):
+    """差分 S4P 的 2X Thru 劈半算法（单端 S2P 始终使用 IEEE 370 SE-NZC）。
+
+    * ``MODE_CONVERSION``：混合模 NZC 的 2×2 模式矩阵推广，夹具模型保留
+      SDC/SCD 模式转换（对应 PLTS 2019+ AFR 的 “AFR Mode Conversion”）；
+    * ``CLASSIC``：skrf ``IEEEP370_MM_NZC_2xThru``，SDD 与 SCC 独立劈半，
+      丢弃模式转换项（夹具 P/N skew 会残留在 DUT 中）。
+    """
+
+    MODE_CONVERSION = "mc_nzc"
+    CLASSIC = "classic_nzc"
+
+    @property
+    def label(self) -> str:
+        return _SPLIT_ALGORITHM_LABELS[self]
+
+    @property
+    def alternative(self) -> "SplitAlgorithm":
+        """用于结果对照的另一种算法。"""
+        return SplitAlgorithm.CLASSIC if self is SplitAlgorithm.MODE_CONVERSION else SplitAlgorithm.MODE_CONVERSION
+
+
+_SPLIT_ALGORITHM_LABELS: dict["SplitAlgorithm", str] = {
+    SplitAlgorithm.MODE_CONVERSION: "混合模 NZC + 模式转换",
+    SplitAlgorithm.CLASSIC: "IEEE 370 经典 MM-NZC",
+}
 
 
 class TdrWindow(_StrEnum):
@@ -183,6 +212,10 @@ class DeembedRequest:
     correction_a: FixtureCorrection = FixtureCorrection()
     correction_b: FixtureCorrection = FixtureCorrection()
     port_extension: "PortExtensionSettings | None" = None
+    #: 差分 2X Thru 劈半算法（S2P 忽略）
+    split_algorithm: SplitAlgorithm = SplitAlgorithm.MODE_CONVERSION
+    #: 是否额外用另一种劈半算法计算一份 DUT，并输出模式转换诊断（仅差分 2X Thru 方法）
+    compare_split_algorithms: bool = False
 
     @classmethod
     def from_triplet(
@@ -230,6 +263,11 @@ class DeembedOutcome:
     fixtures: FixturePair | None = None
     thru_a: rf.Network | None = None
     thru_b: rf.Network | None = None
+    split_algorithm: SplitAlgorithm = SplitAlgorithm.MODE_CONVERSION
+    #: ``compare_split_algorithms`` 时，用另一种劈半算法得到的 DUT（用户端口排布）
+    comparison_dut: rf.Network | None = None
+    #: ``compare_split_algorithms`` 时的模式转换/skew 诊断（``deembed.diagnostics``）
+    diagnostics: Any = None
 
     @property
     def nports(self) -> int:
@@ -257,6 +295,8 @@ class DeembedOutcome:
             networks["thru_a"] = self.thru_a
         if self.thru_b is not None:
             networks["thru_b"] = self.thru_b
+        if self.comparison_dut is not None:
+            networks["dut_alt"] = self.comparison_dut
         return networks
 
 

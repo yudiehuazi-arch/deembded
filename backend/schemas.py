@@ -78,9 +78,18 @@ class DeembedPayload(TypedDict):
     quality: QualityPayload
     chart: dict[str, Any]
     nports: int
+    #: 差分劈半算法（S2P 为 None）及其中文名
+    split_algorithm: NotRequired[str | None]
+    split_algorithm_label: NotRequired[str]
+    #: 对照算法（结果图中的 ``dut_alt`` 曲线）
+    comparison_algorithm: NotRequired[str | None]
+    comparison_label: NotRequired[str | None]
+    #: 差分 skew / 模式转换诊断（``deembed.diagnostics.ModeConversionDiagnostics``）
+    diagnostics: NotRequired[dict[str, Any] | None]
     dut_touchstone: NotRequired[str]
     fix_a_touchstone: NotRequired[str]
     fix_b_touchstone: NotRequired[str]
+    dut_alt_touchstone: NotRequired[str]
 
 
 class TdrStackPayload(TypedDict):

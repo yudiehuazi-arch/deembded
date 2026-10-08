@@ -8,7 +8,16 @@ from __future__ import annotations
 import numpy as np
 from fastapi import UploadFile
 
-from deembed import DeembedRequest, DeembedSide, DeembeddingEngine, PortMapping, mapping_label, network_to_text, pair_labels
+from deembed import (
+    DeembedRequest,
+    DeembedSide,
+    DeembeddingEngine,
+    PortMapping,
+    SplitAlgorithm,
+    mapping_label,
+    network_to_text,
+    pair_labels,
+)
 from deembed.errors import CacheExpiredError, ComputationError, DeembedError, InvalidInputError
 from deembed.reporting import ChartDataBuilder
 
@@ -44,9 +53,11 @@ class DeembeddingService:
         side: str = "both",
         port_mapping: str = "auto",
         reference_z0: float = 50.0,
+        split_algorithm: str = SplitAlgorithm.MODE_CONVERSION.value,
         token: str | None = None,
     ) -> DeembedPayload:
         resolved_side = _resolve_side(side)
+        algorithm = SplitAlgorithm.parse(split_algorithm, field="差分劈半算法")
         requested_mapping = PortMapping.parse(
             port_mapping,
             field="S4P 端口映射",
@@ -70,6 +81,8 @@ class DeembeddingService:
                     side=resolved_side,
                     port_mapping=requested_mapping,
                     reference_z0=z0,
+                    split_algorithm=algorithm,
+                    compare_split_algorithms=True,
                 )
             )
         except DeembedError:
@@ -82,7 +95,10 @@ class DeembeddingService:
         if outcome.fixtures is not None:
             stored["fix_a"] = outcome.fixtures.left
             stored["fix_b"] = outcome.fixtures.right
+        if outcome.comparison_dut is not None:
+            stored["dut_alt"] = outcome.comparison_dut
         result_token = self.caches.results.store(stored)
+        is_differential = outcome.nports == 4
 
         payload: DeembedPayload = {
             "success": True,
@@ -101,6 +117,13 @@ class DeembeddingService:
             "quality": outcome.quality.to_payload(),
             "chart": chart.to_payload(),
             "nports": outcome.nports,
+            "split_algorithm": outcome.split_algorithm.value if is_differential else None,
+            "split_algorithm_label": outcome.split_algorithm.label if is_differential else "IEEE 370 SE-NZC",
+            "comparison_algorithm": outcome.split_algorithm.alternative.value
+            if outcome.comparison_dut is not None
+            else None,
+            "comparison_label": outcome.split_algorithm.alternative.label if outcome.comparison_dut is not None else None,
+            "diagnostics": outcome.diagnostics.to_payload() if outcome.diagnostics is not None else None,
         }
         if result_token is None:
             # 结果体积超出缓存预算时，退化为一次性内联返回，保持前端可用。
@@ -108,6 +131,8 @@ class DeembeddingService:
             if outcome.fixtures is not None:
                 payload["fix_a_touchstone"] = network_to_text(outcome.fixtures.left, form="ri")
                 payload["fix_b_touchstone"] = network_to_text(outcome.fixtures.right, form="ri")
+            if outcome.comparison_dut is not None:
+                payload["dut_alt_touchstone"] = network_to_text(outcome.comparison_dut, form="ri")
         return payload
 
     def result_networks(self, token: str | None) -> dict[str, object] | None:

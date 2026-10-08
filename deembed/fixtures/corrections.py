@@ -24,15 +24,20 @@ def adjust_fixture_delay_loss(
     delta_delay_ps: float = 0.0,
     delta_loss_db: float = 0.0,
     vp_eff: float = SPEED_OF_LIGHT * _DEFAULT_VELOCITY_FACTOR,
+    dut_side: str = "second",
 ) -> rf.Network:
     """按 PLTS 方式平移参考面：正向偏移为加长夹具。
 
-    仅调整“DUT 侧端口”（2 端口网络的端口 2；4 端口网络的端口 3/4），
-    因为夹具的外侧端口始终与仪器参考面重合。
+    仅调整“DUT 侧端口”，因为夹具的外侧端口始终与仪器参考面重合：
+
+    * ``dut_side="second"``（左夹具，外侧 → DUT 侧）：2 端口的端口 2，4 端口的端口 3/4；
+    * ``dut_side="first"`` （右夹具，级联方向 DUT 侧 → 外侧）：2 端口的端口 1，4 端口的端口 1/2。
     """
 
     if abs(delta_delay_ps) < _NOOP_TOLERANCE and abs(delta_loss_db) < _NOOP_TOLERANCE:
         return fixture
+    if dut_side not in ("first", "second"):
+        raise InvalidInputError("dut_side 只能是 'first' 或 'second'。")
 
     delta_tau = delta_delay_ps * 1e-12
     f = np.asarray(fixture.f, dtype=float)
@@ -46,17 +51,16 @@ def adjust_fixture_delay_loss(
     factor = phase_shift * loss_factor
 
     s_adjusted = np.asarray(fixture.s).copy()
-    if fixture.nports == 2:
-        s_adjusted[:, 1, 0] *= factor
-        s_adjusted[:, 0, 1] *= factor
-        s_adjusted[:, 1, 1] *= factor**2
-    elif fixture.nports == 4:
-        for i in (0, 1):
-            for j in (2, 3):
+    half = fixture.nports // 2
+    if fixture.nports in (2, 4):
+        outer_ports = range(half, fixture.nports) if dut_side == "first" else range(half)
+        inner_ports = range(half) if dut_side == "first" else range(half, fixture.nports)
+        for i in outer_ports:
+            for j in inner_ports:
                 s_adjusted[:, i, j] *= factor
                 s_adjusted[:, j, i] *= factor
-        for i in (2, 3):
-            for j in (2, 3):
+        for i in inner_ports:
+            for j in inner_ports:
                 s_adjusted[:, i, j] *= factor**2
 
     return rf.Network(frequency=fixture.frequency, s=s_adjusted, z0=fixture.z0)

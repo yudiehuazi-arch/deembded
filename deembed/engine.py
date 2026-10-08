@@ -13,11 +13,12 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Mapping, Sequence
+from dataclasses import dataclass, replace
+from typing import Final, Mapping, Sequence
 
 import skrf as rf
 
+from .diagnostics import build_mode_conversion_diagnostics
 from .errors import InvalidInputError
 from .frequency import FrequencyAligner, renormalize
 from .metrics import QualityAnalyzer
@@ -30,12 +31,16 @@ from .models import (
     FixtureStandardSet,
     NetworkTriplet,
     PortMapping,
+    SplitAlgorithm,
 )
 from .port_mapping import apply_port_mapping, mapping_label, pair_labels, resolve_port_mapping, restore_port_mapping
 from .strategies import DeembeddingStrategy, StrategyContext, default_strategies
 from .touchstone import SUPPORTED_PORT_COUNTS
 
 __all__ = ["PreparedNetworks", "DeembeddingEngine", "build_default_engine", "shared_engine"]
+
+#: 依赖 2X Thru 劈半、因而受劈半算法影响的方法
+_SPLIT_METHODS: Final[frozenset[FixtureMethod]] = frozenset({FixtureMethod.DUAL_2X_THRU, FixtureMethod.SINGLE_2X_THRU})
 
 
 @dataclass(frozen=True)
@@ -201,8 +206,24 @@ class DeembeddingEngine:
             correction_a=request.correction_a,
             correction_b=request.correction_b,
             port_extension=request.port_extension,
+            split_algorithm=request.split_algorithm,
         )
-        result = self.strategy_for(request.method).apply(context)
+        strategy = self.strategy_for(request.method)
+        result = strategy.apply(context)
+
+        # 差分 2X Thru：可选地用另一种劈半算法再算一份 DUT 作对照，并给出模式转换诊断
+        comparison_dut = None
+        diagnostics = None
+        if request.compare_split_algorithms and prepared.nports == 4 and request.method in _SPLIT_METHODS:
+            alternative = strategy.apply(replace(context, split_algorithm=request.split_algorithm.alternative))
+            diagnostics = build_mode_conversion_diagnostics(
+                thru_a=prepared.standards.thru_a,
+                thru_b=prepared.standards.thru_b,
+                dut=result.dut,
+                comparison_dut=alternative.dut,
+                primary_algorithm=request.split_algorithm,
+            )
+            comparison_dut = restore_port_mapping(alternative.dut, prepared.port_mapping)
 
         dut = restore_port_mapping(result.dut, prepared.port_mapping)
         fixtures = None
@@ -235,6 +256,9 @@ class DeembeddingEngine:
             fixtures=fixtures,
             thru_a=external_thru_a,
             thru_b=external_thru_b,
+            split_algorithm=request.split_algorithm,
+            comparison_dut=comparison_dut,
+            diagnostics=diagnostics,
         )
 
     # ------------------------------------------------------------ 便捷入口
@@ -245,6 +269,7 @@ class DeembeddingEngine:
         port_mapping: PortMapping | str = PortMapping.AUTO,
         reference_z0: float = 50.0,
         corrections: tuple[FixtureCorrection, FixtureCorrection] | None = None,
+        split_algorithm: SplitAlgorithm = SplitAlgorithm.MODE_CONVERSION,
     ) -> FixturePair | None:
         """只提取 1X 夹具模型（供“仅拆分夹具”类功能复用）。"""
 
@@ -263,6 +288,7 @@ class DeembeddingEngine:
                 z0=prepared.reference_z0,
                 correction_a=correction_a,
                 correction_b=correction_b,
+                split_algorithm=split_algorithm,
             )
         )
         return result.fixtures
@@ -275,8 +301,9 @@ class DeembeddingEngine:
         port_mapping: PortMapping | str = PortMapping.AUTO,
         reference_z0: float = 50.0,
         method: FixtureMethod | str = FixtureMethod.DUAL_2X_THRU,
+        split_algorithm: SplitAlgorithm | str = SplitAlgorithm.MODE_CONVERSION,
     ) -> DeembedOutcome:
-        """常用组合的便捷封装（Web 层默认走这里）。"""
+        """常用组合的便捷封装。"""
 
         return self.run(
             DeembedRequest.from_triplet(
@@ -285,6 +312,7 @@ class DeembeddingEngine:
                 port_mapping=port_mapping,
                 reference_z0=reference_z0,
                 method=method,
+                split_algorithm=SplitAlgorithm.parse(split_algorithm, field="劈半算法"),
             )
         )
 
