@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+build/
+dist/
+
+# Node（仅用于前端单元测试）
+node_modules/
+
+# 本地临时文件
+.DS_Store
+*.log

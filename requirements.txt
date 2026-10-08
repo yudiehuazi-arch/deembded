@@ -1,0 +1,7 @@
+fastapi>=0.110
+uvicorn[standard]>=0.27
+python-multipart>=0.0.9
+typing-extensions>=4.8
+scikit-rf>=1.2
+numpy>=1.24
+scipy>=1.10

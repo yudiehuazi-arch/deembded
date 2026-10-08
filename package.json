@@ -1,0 +1,12 @@
+{
+  "name": "deembded-frontend-tests",
+  "private": true,
+  "type": "module",
+  "description": "前端 ES Module 单元测试（Node 内置 test runner + jsdom），不参与构建，浏览器直接加载 static/js。",
+  "scripts": {
+    "test": "node --test \"tests/js/**/*.test.mjs\""
+  },
+  "devDependencies": {
+    "jsdom": "^24.1.0"
+  }
+}
