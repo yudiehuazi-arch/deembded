@@ -42,16 +42,38 @@
 |    - 史密斯圆图 (Smith Chart)                                                   |
 |  * Touchstone 文件拖拽解析与一键下载导出 (.s2p / .s4p)                           |
 |                                                                                 |
-|  [后端算法引擎 (Backend Engine)]                                                |
-|  * FastAPI 高并发异步微服务 + scikit-rf + NumPy + SciPy                         |
-|  * 传输矩阵 (T-Matrix) 全矩阵求逆级联算法                                       |
-|  * IEEE 370 Annex A 2X Thru 时域门限劈半算法 (SE_NZC / MM_NZC)                  |
-|  * 广义混合模正交变换 ($S_{mm} = M S M^{-1}$)                                   |
-|  * 时域 IFFT 汉宁窗加权与 DC 外推阻抗计算                                       |
-|  * IEEE 370 Annex C 质量检验 (无源性、互易性、因果性)                           |
+|  [接口层 (Backend / FastAPI)]                                                   |
+|  * 仅负责 HTTP、表单校验、内存缓存与 JSON 序列化                                 |
+|  * routers/ 健康检查 / 识别 / 去嵌 / TDR；services/ 四个业务服务                  |
+|  * schemas.py 以 TypedDict 固化响应契约；cache.py 提供 TTL + LRU 网络缓存         |
 |                                                                                 |
+|  [领域内核 (deembed / 与框架无关)]                                              |
+|  * engine.py：prepare → strategy → quality 三段式流水线                          |
+|  * strategies/：去嵌策略注册表（扩展点，新增算法无需改动 API 层）                 |
+|  * fixtures/：IEEE 370 Annex A 2X Thru 劈半 (SE_NZC / MM_NZC) + 非对称修正        |
+|  * matrices / frequency / mixed_mode / metrics / tdr / reporting：算法组件       |
+|  * presets/：10 个内置合成示例；legacy.py：v1 函数式接口兼容层                    |
+|  * 传输矩阵 (T-Matrix) 全矩阵求逆级联算法、广义混合模正交变换                     |
+|    ($S_{mm} = M S M^{-1}$)、IFFT 加窗与 DC 外推阻抗、Annex C 质量检验             |
 +---------------------------------------------------------------------------------+
 ```
+
+### 1.1 代码结构与扩展点
+
+前端为**原生 ES Module**（无构建步骤），后端为**分层 Python 包**，均避免单文件堆积：
+
+| 目录 | 职责 | 典型扩展方式 |
+| :--- | :--- | :--- |
+| `deembed/strategies/` | 去嵌算法策略 | 实现 `DeembeddingStrategy` 并在 `default_strategies()` 注册 |
+| `deembed/fixtures/` | 劈半与夹具修正 | 实现 `Nzc2xThruExtractor` 并加入 `EXTRACTORS` |
+| `deembed/reporting.py`、`tdr.py` | 图表/时域数据构建 | 新增 `to_payload()` 报表对象 |
+| `backend/services/`、`backend/routers/` | HTTP 编排 | 加服务 + 路由，注册到 `ALL_ROUTERS` |
+| `backend/schemas.py` | 响应契约 | 先改 TypedDict，再改服务返回 |
+| `static/js/controllers/` | 图表交互流程 | 继承 `ChartFlowController`（模式切换 + 请求竞态已内置） |
+| `static/js/charts/` | 纯函数绘图与坐标 | 增加渲染/构建模块，`ChartPanel` 负责交互 |
+| `static/js/ui/` | 面板渲染 | 只读写 DOM 与状态，不直接发起请求 |
+
+测试：`python -m pytest`（139 项，领域 + HTTP 契约 + v1 兼容）与 `npm test`（56 项，前端纯函数 + 交互 + 集成）。
 
 ### 核心功能矩阵
 | 功能维度 | 支持选项 | 说明 |

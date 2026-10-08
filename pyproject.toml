@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "deembded"
+version = "2.0.0"
+description = "RF De-embedding Workbench：IEEE 370 / PLTS 风格的 S 参数去嵌网页工作台"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.110",
+  "uvicorn[standard]>=0.27",
+  "python-multipart>=0.0.9",
+  "typing-extensions>=4.8",
+  "scikit-rf>=1.2",
+  "numpy>=1.24",
+  "scipy>=1.10",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.4", "httpx>=0.27", "pyflakes>=3.2"]
+
+[tool.setuptools]
+packages = ["backend", "backend.routers", "backend.services", "deembed", "deembed.fixtures", "deembed.presets", "deembed.strategies"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = [
+  "ignore::RuntimeWarning:skrf.*",
+  "ignore::DeprecationWarning:starlette.*",
+]
+
+[tool.ruff]
+line-length = 140
+target-version = "py311"
