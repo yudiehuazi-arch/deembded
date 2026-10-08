@@ -142,6 +142,9 @@ def test_deembed_triplet_convenience(engine) -> None:
     outcome = engine.deembed_triplet(triplet, port_mapping=PortMapping.PLTS)
     assert outcome.port_mapping is PortMapping.PLTS
     assert outcome.nports == 4
+    np.testing.assert_allclose(outcome.total.s, triplet.total.s, atol=1e-12)
+    np.testing.assert_allclose(outcome.thru_a.s, triplet.thru_a.s, atol=1e-12)
+    np.testing.assert_allclose(outcome.thru_b.s, triplet.thru_b.s, atol=1e-12)
 
 
 def _group_delay_ps(network) -> float:  # noqa: ANN001

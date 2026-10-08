@@ -212,6 +212,18 @@ class DeembeddingEngine:
                 right=restore_port_mapping(result.fixtures.right, prepared.port_mapping),
             )
 
+        external_total = restore_port_mapping(prepared.total, prepared.port_mapping)
+        external_thru_a = (
+            restore_port_mapping(prepared.standards.thru_a, prepared.port_mapping)
+            if prepared.standards.thru_a is not None
+            else None
+        )
+        external_thru_b = (
+            restore_port_mapping(prepared.standards.thru_b, prepared.port_mapping)
+            if prepared.standards.thru_b is not None
+            else None
+        )
+
         return DeembedOutcome(
             dut=dut,
             quality=self.quality.analyze(dut),
@@ -219,10 +231,10 @@ class DeembeddingEngine:
             method=request.method,
             port_mapping=prepared.port_mapping,
             reference_z0=prepared.reference_z0,
-            total=prepared.total,
+            total=external_total,
             fixtures=fixtures,
-            thru_a=prepared.standards.thru_a,
-            thru_b=prepared.standards.thru_b,
+            thru_a=external_thru_a,
+            thru_b=external_thru_b,
         )
 
     # ------------------------------------------------------------ 便捷入口
