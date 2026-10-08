@@ -130,8 +130,17 @@ def test_file_based_4port_supports_plts_mapping_where_v1_crashed(diff_preset):
     """v1 在 PLTS 映射下会抛 LinAlgError；v2 兼容层应正常返回。"""
 
     payload = legacy.generate_preset_diff_dual_2xthru()
+
+    def to_plts_order(network):  # noqa: ANN001
+        reordered = network.copy()
+        reordered.renumber([0, 1, 2, 3], [0, 2, 1, 3])
+        return reordered
+
     dut = legacy.file_based_deembed_4port(
-        payload["total"], payload["fix_l"], payload["fix_r"], port_mapping="plts"
+        to_plts_order(payload["total"]),
+        to_plts_order(payload["fix_l"]),
+        to_plts_order(payload["fix_r"]),
+        port_mapping="plts",
     )
     assert dut.nports == 4
     assert len(dut.f) == len(payload["total"].f)

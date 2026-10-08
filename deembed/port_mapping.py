@@ -72,7 +72,7 @@ def apply_port_mapping(network: rf.Network, mapping: PortMapping) -> rf.Network:
 
     work = network.copy()
     if mapping is PortMapping.PLTS and work.nports == 4:
-        work.renumber(PLTS_PORT_ORDER, PLTS_PORT_ORDER)
+        work.renumber(PLTS_PORT_ORDER, [0, 1, 2, 3])
     return work
 
 
@@ -104,5 +104,5 @@ def renumber_sequence(network: rf.Network, order: Sequence[int]) -> rf.Network:
     """按给定端口顺序返回重排后的副本（供未来扩展使用）。"""
 
     work = network.copy()
-    work.renumber(list(order), list(order))
+    work.renumber(list(order), list(range(len(order))))
     return work

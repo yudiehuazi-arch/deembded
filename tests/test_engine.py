@@ -133,7 +133,13 @@ def test_engine_can_register_custom_strategy(engine) -> None:
 
 def test_deembed_triplet_convenience(engine) -> None:
     preset: DemoPreset = presets.get_preset("diff_dual_2xthru")
-    outcome = engine.deembed_triplet(preset.to_triplet(), port_mapping=PortMapping.PLTS)
+    def to_plts_order(network):  # noqa: ANN001
+        reordered = network.copy()
+        reordered.renumber([0, 1, 2, 3], [0, 2, 1, 3])
+        return reordered
+
+    triplet = NetworkTriplet(*(to_plts_order(network) for network in preset.to_triplet()))
+    outcome = engine.deembed_triplet(triplet, port_mapping=PortMapping.PLTS)
     assert outcome.port_mapping is PortMapping.PLTS
     assert outcome.nports == 4
 

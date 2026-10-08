@@ -89,6 +89,17 @@ def test_resolve_and_apply_mapping_is_involutive() -> None:
     np.testing.assert_allclose(restored.s, network.s, atol=1e-12)
 
 
+def test_plts_mapping_swaps_middle_ports() -> None:
+    network = _network(1.0, 10.0, 12, nports=4)
+    order = [0, 2, 1, 3]
+
+    mapped = apply_port_mapping(network, PortMapping.PLTS)
+
+    expected = network.s[:, order, :][:, :, order]
+    np.testing.assert_allclose(mapped.s, expected, atol=1e-12)
+    assert not np.allclose(mapped.s, network.s)
+
+
 def test_resolve_rejects_invalid_mapping_and_labels() -> None:
     network = _network(1.0, 10.0, 12, nports=4)
     with pytest.raises(InvalidInputError):
